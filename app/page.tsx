@@ -483,26 +483,11 @@ export default function Home() {
                 <p>
                   {entry.media} · {entry.releaseDate}
                 </p>
-                <div className="poster-controls">
-                  <StatusSelect
-                    onChange={(status) => updateTracking(entry.id, { status })}
-                    value={entryTracking.status}
-                  />
-                  <input
-                    aria-label={`Watched year for ${entry.name}`}
-                    className="year-input"
-                    disabled={entryTracking.status !== "Watched"}
-                    inputMode="numeric"
-                    maxLength={4}
-                    onChange={(event) =>
-                      updateTracking(entry.id, {
-                        watchedYear: event.target.value
-                      })
-                    }
-                    placeholder="Year"
-                    value={entryTracking.watchedYear ?? ""}
-                  />
-                </div>
+                <PosterTrackingControls
+                  entry={entry}
+                  onChange={updateTracking}
+                  tracking={entryTracking}
+                />
               </article>
             );
           })}
@@ -518,6 +503,44 @@ export default function Home() {
         />
       ) : null}
     </main>
+  );
+}
+
+function PosterTrackingControls({
+  entry,
+  onChange,
+  tracking
+}: {
+  entry: LiteMediaEntry;
+  onChange: (titleId: string, update: Partial<LiteTrackingEntry>) => void;
+  tracking: LiteTrackingEntry;
+}) {
+  return (
+    <div
+      className={`poster-controls ${
+        tracking.status === "Watched" ? "has-year" : ""
+      }`}
+    >
+      <StatusSelect
+        onChange={(status) => onChange(entry.id, { status })}
+        value={tracking.status}
+      />
+      {tracking.status === "Watched" ? (
+        <input
+          aria-label={`Watched year for ${entry.name}`}
+          className="year-input"
+          inputMode="numeric"
+          maxLength={4}
+          onChange={(event) =>
+            onChange(entry.id, {
+              watchedYear: event.target.value
+            })
+          }
+          placeholder="Year"
+          value={tracking.watchedYear ?? ""}
+        />
+      ) : null}
+    </div>
   );
 }
 

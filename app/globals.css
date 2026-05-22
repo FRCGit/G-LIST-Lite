@@ -379,8 +379,18 @@ tbody tr:hover td {
 .poster-controls {
   display: grid;
   gap: 8px;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr;
   margin-top: auto;
+}
+
+.poster-controls.has-year {
+  grid-template-columns: minmax(0, 1fr) 72px;
+}
+
+.poster-controls .status-select,
+.poster-controls .year-input {
+  min-width: 0;
+  width: 100%;
 }
 
 .empty-state {

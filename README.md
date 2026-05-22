@@ -226,6 +226,9 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
    - Responsive grid.
    - Poster image, title, and compact metadata.
    - Same tracking controls as table, but visually quieter.
+   - Do not show disabled `Year` inputs on every poster card.
+   - In poster view, show the year input only when status is `Watched`; otherwise the status select should use the full control width.
+   - Keep poster controls compact enough that they do not overflow narrow cards.
 
 4. Preview card
    - Position near hovered item on desktop.
@@ -358,3 +361,8 @@ Recommended next steps:
    - Tablet: poster wall as a strong/default option, table still available with horizontal scroll.
    - Phone: compact list/card layout instead of full table.
 4. Add export/import JSON backup for local tracking.
+5. Consider poster wall refinements:
+   - Compact/dense card size toggle.
+   - Hide poster controls until hover on desktop, but keep them always visible on touch.
+   - Add a small watched-year badge on watched poster cards.
+   - Add a detail sheet so the poster card itself can stay cleaner.
