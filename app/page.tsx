@@ -336,15 +336,6 @@ export default function Home() {
         </div>
 
         <div className="controls">
-          <input
-            aria-label="Search titles"
-            className="search"
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
-            type="search"
-            value={search}
-          />
-
           <div className="segmented" aria-label="View mode">
             <button
               className={viewMode === "table" ? "active" : ""}
@@ -361,6 +352,15 @@ export default function Home() {
               Poster Wall
             </button>
           </div>
+
+          <input
+            aria-label="Search titles"
+            className="search"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search"
+            type="search"
+            value={search}
+          />
         </div>
       </header>
 

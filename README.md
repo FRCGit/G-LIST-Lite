@@ -180,9 +180,8 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 
 1. Top bar
    - `G-LIST`
-   - Search input
    - Table / Poster Wall segmented control
-   - Status filter
+   - Search input on the far right edge
 
 2. Table
    - Compact, Wikipedia-like dark table.
