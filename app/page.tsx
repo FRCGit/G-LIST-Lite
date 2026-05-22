@@ -102,7 +102,6 @@ function shouldRenderSpannedCell(
 export default function Home() {
   const [tracking, setTracking] = useState<Record<string, LiteTrackingEntry>>({});
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<WatchStatus | "All">("All");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -129,14 +128,14 @@ export default function Home() {
   }, [columnWidths, hasLoadedLocalState]);
 
   const visibleEntries = useMemo(() => {
-    const filteredEntries = filterEntries(entries, tracking, search, statusFilter);
+    const filteredEntries = filterEntries(entries, search);
 
     if (!sortKey) {
       return filteredEntries;
     }
 
     return sortEntries(filteredEntries, tracking, sortKey, sortDirection);
-  }, [search, sortDirection, sortKey, statusFilter, tracking]);
+  }, [search, sortDirection, sortKey, tracking]);
 
   function updateTracking(titleId: string, update: Partial<LiteTrackingEntry>) {
     setTracking((current) => {
@@ -362,21 +361,6 @@ export default function Home() {
               Poster Wall
             </button>
           </div>
-
-          <select
-            aria-label="Filter by status"
-            onChange={(event) =>
-              setStatusFilter(event.target.value as WatchStatus | "All")
-            }
-            value={statusFilter}
-          >
-            <option value="All">All statuses</option>
-            {watchStatuses.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
         </div>
       </header>
 
@@ -584,7 +568,7 @@ function StatusSelect({
   return (
     <select
       aria-label="Watch status"
-      className={`status-select status-${value.toLowerCase()}`}
+      className={`status-select status-${value.toLowerCase().replace(" ", "-")}`}
       onChange={(event) => onChange(event.target.value as WatchStatus)}
       value={value}
     >

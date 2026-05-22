@@ -50,15 +50,16 @@ Primary inspiration:
      - `Unwatched`
      - `Watching`
      - `Watched`
-     - `Skipped`
+     - `Up Next`
    - Watched year should be enabled only when status is `Watched`.
+   - Previous saved `Skipped` values should migrate to `Up Next`.
    - Store tracking locally at first using `localStorage`.
    - Keep the tracking state small and cloud-ready:
 
 ```ts
 type LiteTrackingEntry = {
   titleId: string;
-  status: "Unwatched" | "Watching" | "Watched" | "Skipped";
+  status: "Unwatched" | "Watching" | "Watched" | "Up Next";
   watchedYear?: string;
   notes?: string;
 };
@@ -66,7 +67,8 @@ type LiteTrackingEntry = {
 
 5. Search and basic filters
    - Search titles.
-   - Filter by status.
+   - Status filtering dropdown was intentionally removed from the top controls.
+   - Use the `Watch status` table header sort to group statuses in table view.
    - Optional later: filter by media type or timeline.
 
 ## Nice-To-Have Later
@@ -213,7 +215,8 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
      - `Timeline and year`: about `31ch`, so `Advanced Generation (AG) 115-164` fits before wrapping.
      - Tracking columns must have dedicated width so `Watch status` and `Year` do not get squeezed.
      - The final tracking header should be `Year`, not `Watched year`.
-     - The top control/header row should use the same computed width as the table, so the right edge of the `All statuses` control lines up with the right edge of the `Year` column.
+   - The top control/header row should use the same computed width as the table.
+   - Do not add a top status filter beside `Poster Wall`; status grouping should happen through table sorting.
    - Desktop table columns are manually resizable by dragging the right edge of each header.
    - Resized column widths persist to `localStorage` under `g-list-lite-column-widths-v1`.
    - Column resizing is implemented through the table column config and `colgroup`, so future layout changes should keep using that path.

@@ -10,7 +10,7 @@ export const watchStatuses: WatchStatus[] = [
   "Unwatched",
   "Watching",
   "Watched",
-  "Skipped"
+  "Up Next"
 ];
 
 export function getTrackingForTitle(
@@ -69,22 +69,16 @@ export function sortEntries(
 
 export function filterEntries(
   entries: LiteMediaEntry[],
-  tracking: Record<string, LiteTrackingEntry>,
-  search: string,
-  status: WatchStatus | "All"
+  search: string
 ): LiteMediaEntry[] {
   const query = normalizeSearchText(search);
 
   return entries.filter((entry) => {
-    const entryTracking = getTrackingForTitle(tracking, entry.id);
-    const matchesStatus = status === "All" || entryTracking.status === status;
-    const matchesSearch =
+    return (
       query.length === 0 ||
       normalizeSearchText(
         `${entry.name} ${entry.media} ${entry.releaseDate} ${entry.timelineAndYear}`
-      ).includes(query);
-
-    return matchesStatus && matchesSearch;
+      ).includes(query)
+    );
   });
 }
-

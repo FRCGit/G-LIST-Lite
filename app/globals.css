@@ -13,7 +13,7 @@
   --control: #0e151b;
   --watched: #79bc8a;
   --watching: #5c98d6;
-  --skipped: #c89075;
+  --up-next: #c89075;
 }
 
 * {
@@ -133,7 +133,6 @@ a:hover {
   color: #ffffff;
 }
 
-.controls select,
 .status-select {
   height: 34px;
   padding: 0 28px 0 10px;
@@ -316,8 +315,8 @@ tbody tr:hover td {
   border-color: color-mix(in srgb, var(--watching), var(--line) 30%);
 }
 
-.status-skipped {
-  border-color: color-mix(in srgb, var(--skipped), var(--line) 30%);
+.status-up-next {
+  border-color: color-mix(in srgb, var(--up-next), var(--line) 30%);
 }
 
 .poster-grid {
@@ -489,8 +488,7 @@ dd {
   }
 
   .search,
-  .segmented,
-  .controls select {
+  .segmented {
     min-width: 0;
     width: 100%;
   }

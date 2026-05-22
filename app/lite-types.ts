@@ -1,4 +1,4 @@
-export type WatchStatus = "Unwatched" | "Watching" | "Watched" | "Skipped";
+export type WatchStatus = "Unwatched" | "Watching" | "Watched" | "Up Next";
 
 export type LiteTrackingEntry = {
   titleId: string;
@@ -29,4 +29,3 @@ export type SortKey =
   | "watchedYear";
 
 export type SortDirection = "asc" | "desc";
-

@@ -1,6 +1,6 @@
 "use client";
 
-import type { LiteTrackingEntry } from "./lite-types";
+import type { LiteTrackingEntry, WatchStatus } from "./lite-types";
 
 const trackingKey = "g-list-lite-tracking-v1";
 
@@ -13,7 +13,20 @@ export function loadTracking(): Record<string, LiteTrackingEntry> {
     }
 
     const parsed = JSON.parse(saved) as Record<string, LiteTrackingEntry>;
-    return parsed && typeof parsed === "object" ? parsed : {};
+
+    if (!parsed || typeof parsed !== "object") {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).map(([titleId, entry]) => [
+        titleId,
+        {
+          ...entry,
+          status: migrateStatus(entry.status)
+        }
+      ])
+    );
   } catch {
     return {};
   }
@@ -23,3 +36,6 @@ export function saveTracking(tracking: Record<string, LiteTrackingEntry>): void 
   window.localStorage.setItem(trackingKey, JSON.stringify(tracking));
 }
 
+function migrateStatus(status: string): WatchStatus {
+  return status === "Skipped" ? "Up Next" : (status as WatchStatus);
+}
