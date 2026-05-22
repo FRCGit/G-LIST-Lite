@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import mediaEntries from "../data/g-list-lite-media.json";
 import {
   filterEntries,
@@ -108,6 +108,9 @@ export default function Home() {
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({});
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setTracking(loadTracking());
@@ -276,6 +279,7 @@ export default function Home() {
     (total, column) => total + resolvedColumnWidths[column.key],
     0
   );
+  const hasCustomColumnWidths = Object.keys(columnWidths).length > 0;
 
   function resizeColumn(
     column: TableColumn,
@@ -327,6 +331,67 @@ export default function Home() {
     setSortDirection("asc");
   }
 
+  function resetColumnWidths() {
+    setColumnWidths({});
+    window.localStorage.removeItem(columnWidthsKey);
+  }
+
+  function exportTracking() {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      tracking
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json"
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "g-list-tracking.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importTracking(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(await file.text()) as {
+        tracking?: Record<string, LiteTrackingEntry>;
+      };
+
+      if (!parsed.tracking || typeof parsed.tracking !== "object") {
+        return;
+      }
+
+      setTracking(parsed.tracking);
+    } finally {
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    }
+  }
+
+  function syncTableScroll(source: "top" | "table") {
+    const topScroll = topScrollRef.current;
+    const tableScroll = tableScrollRef.current;
+
+    if (!topScroll || !tableScroll) {
+      return;
+    }
+
+    if (source === "top") {
+      tableScroll.scrollLeft = topScroll.scrollLeft;
+      return;
+    }
+
+    topScroll.scrollLeft = tableScroll.scrollLeft;
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar" style={{ width: `${tableWidth}px` }}>
@@ -353,6 +418,35 @@ export default function Home() {
             </button>
           </div>
 
+          {viewMode === "table" && hasCustomColumnWidths ? (
+            <button
+              className="reset-columns"
+              onClick={resetColumnWidths}
+              type="button"
+            >
+              Reset columns
+            </button>
+          ) : null}
+
+          <button className="utility-button" onClick={exportTracking} type="button">
+            Export
+          </button>
+          <button
+            className="utility-button"
+            onClick={() => importInputRef.current?.click()}
+            type="button"
+          >
+            Import
+          </button>
+          <input
+            accept="application/json"
+            aria-label="Import tracking JSON"
+            className="hidden-file-input"
+            onChange={(event) => importTracking(event.target.files?.[0])}
+            ref={importInputRef}
+            type="file"
+          />
+
           <input
             aria-label="Search titles"
             className="search"
@@ -371,11 +465,23 @@ export default function Home() {
         </section>
       ) : viewMode === "table" ? (
         <section
-          className="table-wrap"
+          className="table-shell"
           style={{ width: `${tableWidth + tableBorderAllowance}px` }}
           aria-label="Gundam media table"
         >
-          <table style={{ width: `${tableWidth}px` }}>
+          <div
+            className="top-scrollbar"
+            onScroll={() => syncTableScroll("top")}
+            ref={topScrollRef}
+          >
+            <div style={{ width: `${tableWidth}px` }} />
+          </div>
+          <div
+            className="table-wrap"
+            onScroll={() => syncTableScroll("table")}
+            ref={tableScrollRef}
+          >
+            <table style={{ width: `${tableWidth}px` }}>
             <colgroup>
               {tableColumns.map((column) => (
                 <col
@@ -450,7 +556,8 @@ export default function Home() {
                 );
               })}
             </tbody>
-          </table>
+            </table>
+          </div>
         </section>
       ) : (
         <section className="poster-grid" aria-label="Gundam poster wall">
@@ -471,12 +578,7 @@ export default function Home() {
                   target={entry.pageTitle ? "_blank" : undefined}
                 >
                   <div className="poster-frame">
-                    {entry.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img alt="" src={entry.thumbnailUrl} />
-                    ) : (
-                      <span>{entry.name}</span>
-                    )}
+                    <span>{entry.name}</span>
                   </div>
                   <h2>{entry.name}</h2>
                 </a>

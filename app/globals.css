@@ -11,9 +11,6 @@
   --link-hover: #8cbff0;
   --focus: #36c;
   --control: #0e151b;
-  --watched: #79bc8a;
-  --watching: #5c98d6;
-  --up-next: #c89075;
 }
 
 * {
@@ -138,10 +135,43 @@ a:hover {
   padding: 0 28px 0 10px;
 }
 
+.reset-columns,
+.utility-button {
+  cursor: pointer;
+  height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.table-shell {
+  margin: 0 auto;
+  max-width: calc(100vw - 64px);
+}
+
+.top-scrollbar {
+  height: 14px;
+  margin: 0 auto 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.top-scrollbar > div {
+  height: 1px;
+}
+
 .table-wrap {
   margin: 0 auto;
   overflow-x: auto;
   transition: width 120ms ease;
+}
+
+.top-scrollbar,
+.table-wrap {
+  width: 100%;
 }
 
 table {
@@ -307,18 +337,6 @@ tbody tr:hover td {
   width: 15ch;
 }
 
-.status-watched {
-  border-color: color-mix(in srgb, var(--watched), var(--line) 35%);
-}
-
-.status-watching {
-  border-color: color-mix(in srgb, var(--watching), var(--line) 30%);
-}
-
-.status-up-next {
-  border-color: color-mix(in srgb, var(--up-next), var(--line) 30%);
-}
-
 .poster-grid {
   display: grid;
   gap: 14px;
@@ -344,14 +362,17 @@ tbody tr:hover td {
 .poster-frame {
   align-items: center;
   aspect-ratio: 2 / 3;
-  background: #202122;
+  background: #171b20;
   border: 1px solid var(--line);
   color: var(--muted);
   display: flex;
+  font-size: 15px;
+  font-style: italic;
   justify-content: center;
+  line-height: 1.35;
   margin-bottom: 10px;
   overflow: hidden;
-  padding: 12px;
+  padding: 16px;
   text-align: center;
 }
 
@@ -384,13 +405,22 @@ tbody tr:hover td {
 }
 
 .poster-controls.has-year {
-  grid-template-columns: minmax(0, 1fr) 72px;
+  grid-template-columns: minmax(0, 1fr) 62px;
 }
 
 .poster-controls .status-select,
 .poster-controls .year-input {
   min-width: 0;
   width: 100%;
+}
+
+.poster-controls.has-year .year-input {
+  width: 62px;
+}
+
+.poster-controls .status-select {
+  padding-left: 8px;
+  padding-right: 22px;
 }
 
 .empty-state {

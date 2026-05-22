@@ -53,6 +53,7 @@ Primary inspiration:
      - `Up Next`
    - Watched year should be enabled only when status is `Watched`.
    - Previous saved `Skipped` values should migrate to `Up Next`.
+   - Export/import JSON backup should be available from the top controls.
    - Store tracking locally at first using `localStorage`.
    - Keep the tracking state small and cloud-ready:
 
@@ -65,6 +66,16 @@ type LiteTrackingEntry = {
 };
 ```
 
+Backup shape:
+
+```ts
+type LiteTrackingBackup = {
+  version: 1;
+  exportedAt: string;
+  tracking: Record<string, LiteTrackingEntry>;
+};
+```
+
 5. Search and basic filters
    - Search titles.
    - Status filtering dropdown was intentionally removed from the top controls.
@@ -73,7 +84,6 @@ type LiteTrackingEntry = {
 
 ## Nice-To-Have Later
 
-- Export/import JSON backup.
 - Cloud sync and login.
 - iPad/mobile-optimized layout.
 - Local detail drawer before opening Wikipedia.
@@ -197,6 +207,7 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
    - Thin borders.
    - Sort arrows on active header.
    - Watch status select in the row.
+   - Watch status selects should use the same neutral border color for all statuses.
    - Watched year input/select at the end of the row.
    - Table columns should be driven by a column definition object, not `nth-child` CSS:
      - `key`
@@ -219,15 +230,19 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
    - Desktop table columns are manually resizable by dragging the right edge of each header.
    - Resized column widths persist to `localStorage` under `g-list-lite-column-widths-v1`.
    - Column resizing is implemented through the table column config and `colgroup`, so future layout changes should keep using that path.
-   - Future desktop enhancement: add a visible `Reset columns` control if widths get awkward.
-   - Future wide-table enhancement: add a top horizontal scrollbar or sticky scroll proxy so users do not have to scroll to the bottom to move horizontally.
+   - Show a `Reset columns` control in table view when custom column widths are saved.
+   - `Reset columns` should clear `g-list-lite-column-widths-v1` and restore default widths.
+   - Table view should include a top horizontal scrollbar synced with the table body so users do not have to scroll to the bottom to move horizontally.
 
 3. Poster wall
    - Responsive grid.
-   - Poster image, title, and compact metadata.
+   - Poster frame, title, and compact metadata.
+   - Temporarily hide poster art in Poster Wall until final visual pass; keep the frame size/aspect ratio stable.
+   - Hover preview cards may still use thumbnails/posters.
    - Same tracking controls as table, but visually quieter.
    - Do not show disabled `Year` inputs on every poster card.
    - In poster view, show the year input only when status is `Watched`; otherwise the status select should use the full control width.
+   - When a poster card is `Watched`, keep status and year side-by-side, but tighten control padding so `Watched` does not get clipped in narrow cards.
    - Keep poster controls compact enough that they do not overflow narrow cards.
 
 4. Preview card
@@ -266,6 +281,7 @@ Do this after desktop works.
 - Status tracking is stored in `localStorage` under `g-list-lite-tracking-v1`.
 - Column widths are stored in `localStorage` under `g-list-lite-column-widths-v1`.
 - Local state saves are gated until after localStorage has been loaded, so the first render does not wipe saved tracking or column widths.
+- Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
 
 ```text
@@ -308,7 +324,7 @@ g-list-lite-tracking-v1
 
 Phase 2:
 
-- Add export/import JSON.
+- Add cloud-ready persistence or a richer backup flow if needed.
 
 Phase 3:
 
@@ -355,13 +371,10 @@ Completed:
 
 Recommended next steps:
 
-1. Add a visible `Reset columns` control for resized table widths.
-2. Add a top horizontal scrollbar/sticky scroll proxy for wide table use.
-3. Build tablet and phone layouts:
+1. Build tablet and phone layouts:
    - Tablet: poster wall as a strong/default option, table still available with horizontal scroll.
    - Phone: compact list/card layout instead of full table.
-4. Add export/import JSON backup for local tracking.
-5. Consider poster wall refinements:
+2. Consider poster wall refinements:
    - Compact/dense card size toggle.
    - Hide poster controls until hover on desktop, but keep them always visible on touch.
    - Add a small watched-year badge on watched poster cards.
