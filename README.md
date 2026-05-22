@@ -1,6 +1,6 @@
-# G-LIST Lite
+# G-LIST
 
-G-LIST Lite is the simplified tracker version of G-List. It should live as a completely separate project/repo from the full G-List app. The full app remains preserved in the original `G-List` repo.
+G-LIST is the simplified tracker version of G-List. It should live as a completely separate project/repo from the full G-List app. The full app remains preserved in the original `G-List` repo.
 
 This file is the handoff brief for future Codex sessions. If the chat/session is lost, start here.
 
@@ -179,7 +179,7 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 ## Desktop-First UI Plan
 
 1. Top bar
-   - `G-LIST Lite`
+   - `G-LIST`
    - Search input
    - Table / Poster Wall segmented control
    - Status filter

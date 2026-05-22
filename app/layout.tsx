@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "G-LIST Lite",
+  title: "G-LIST",
   description: "A compact Gundam media tracker."
 };
 
@@ -17,4 +17,3 @@ export default function RootLayout({
     </html>
   );
 }
-

@@ -331,7 +331,7 @@ export default function Home() {
     <main className="app-shell">
       <header className="topbar" style={{ width: `${tableWidth}px` }}>
         <div>
-          <h1>G-LIST Lite</h1>
+          <h1>G-LIST</h1>
           <p>{visibleEntries.length} titles</p>
         </div>
 
