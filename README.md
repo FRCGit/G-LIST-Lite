@@ -213,7 +213,7 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
      - `Timeline and year`: about `31ch`, so `Advanced Generation (AG) 115-164` fits before wrapping.
      - Tracking columns must have dedicated width so `Watch status` and `Year` do not get squeezed.
      - The final tracking header should be `Year`, not `Watched year`.
-     - The top control/header row should use the same computed width as the table work area so it grows when columns are resized.
+     - The top control/header row should use the same computed width as the table, so the right edge of the `All statuses` control lines up with the right edge of the `Year` column.
    - Desktop table columns are manually resizable by dragging the right edge of each header.
    - Resized column widths persist to `localStorage` under `g-list-lite-column-widths-v1`.
    - Column resizing is implemented through the table column config and `colgroup`, so future layout changes should keep using that path.

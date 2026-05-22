@@ -40,7 +40,6 @@ type ColumnWidths = Partial<Record<SortKey, number>>;
 
 const entries = mediaEntries as LiteMediaEntry[];
 const columnWidthsKey = "g-list-lite-column-widths-v1";
-const desktopWidthPadding = 160;
 
 function loadColumnWidths(): ColumnWidths {
   try {
@@ -277,7 +276,6 @@ export default function Home() {
     (total, column) => total + resolvedColumnWidths[column.key],
     0
   );
-  const contentWidth = tableWidth + desktopWidthPadding;
 
   function resizeColumn(
     column: TableColumn,
@@ -331,7 +329,7 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <header className="topbar" style={{ width: `${contentWidth}px` }}>
+      <header className="topbar" style={{ width: `${tableWidth}px` }}>
         <div>
           <h1>G-LIST Lite</h1>
           <p>{visibleEntries.length} titles</p>
@@ -389,7 +387,7 @@ export default function Home() {
       ) : viewMode === "table" ? (
         <section
           className="table-wrap"
-          style={{ width: `${contentWidth}px` }}
+          style={{ width: `${tableWidth}px` }}
           aria-label="Gundam media table"
         >
           <table style={{ width: `${tableWidth}px` }}>
