@@ -40,6 +40,7 @@ type ColumnWidths = Partial<Record<SortKey, number>>;
 
 const entries = mediaEntries as LiteMediaEntry[];
 const columnWidthsKey = "g-list-lite-column-widths-v1";
+const tableBorderAllowance = 2;
 
 function loadColumnWidths(): ColumnWidths {
   try {
@@ -387,7 +388,7 @@ export default function Home() {
       ) : viewMode === "table" ? (
         <section
           className="table-wrap"
-          style={{ width: `${tableWidth}px` }}
+          style={{ width: `${tableWidth + tableBorderAllowance}px` }}
           aria-label="Gundam media table"
         >
           <table style={{ width: `${tableWidth}px` }}>
