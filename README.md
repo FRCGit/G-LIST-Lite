@@ -131,10 +131,25 @@ type LiteMediaEntry = {
 The current repo already has a Wikipedia sync script:
 
 ```text
-scripts/sync-gundam-wikipedia.ts
+scripts/sync-gundam-wikipedia-lite.ts
 ```
 
-That script currently captures the table data but not title links, summaries, or thumbnails. Use it as the starting point.
+That script captures the table data, title links when available, summaries, and thumbnails.
+
+There is also a validation script:
+
+```text
+scripts/validate-wikipedia-snapshot.ts
+```
+
+It independently expands the live Wikipedia table into rows, including rowspans, and compares the four visible table columns against `data/g-list-lite-media.json`.
+
+Run this whenever the sync parser changes:
+
+```text
+npm run sync:wikipedia
+npm run validate:wikipedia
+```
 
 ## Proposed File Layout
 
@@ -169,11 +184,41 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 
 2. Table
    - Compact, Wikipedia-like dark table.
+   - Match Wikipedia dark-mode styling closely:
+     - Sans-serif text at about 16px.
+     - Dark table background and thin gray borders.
+     - Blue title links.
+     - Italic/slanted title names in the `Name` column.
+     - Sort indicators: double arrows by default, single ascending/descending arrow after click.
+     - Sort cycle should be `default -> ascending -> descending -> default`.
+     - Returning to default restores the original Wikipedia snapshot row order.
    - Blue title links.
    - Thin borders.
    - Sort arrows on active header.
    - Watch status select in the row.
    - Watched year input/select at the end of the row.
+   - Table columns should be driven by a column definition object, not `nth-child` CSS:
+     - `key`
+     - `label`
+     - `width`
+     - `className`
+     - optional `spanKey`
+     - `render`
+   - Preserve Wikipedia rowspans visually. Examples:
+     - `Mobile Suit Gundam GQuuuuuuX` should show two media rows: `Compilation movie` and `TV series: 12 episodes`.
+     - Its `Name`, `Release date`, and `Timeline and year` cells should span those rows like Wikipedia.
+     - `Mobile Suit Gundam: The Witch from Mercury` should show `Prologue ONA` and `TV series: 24 episodes` as separate rows under one title.
+   - Current preferred widths:
+     - `Name`: about `44ch`, so `Mobile Suit Gundam MS IGLOO: Apocalypse 0079` fits before wrapping.
+     - `Timeline and year`: about `31ch`, so `Advanced Generation (AG) 115-164` fits before wrapping.
+     - Tracking columns must have dedicated width so `Watch status` and `Year` do not get squeezed.
+     - The final tracking header should be `Year`, not `Watched year`.
+     - The top control/header row should use the same computed width as the table work area so it grows when columns are resized.
+   - Desktop table columns are manually resizable by dragging the right edge of each header.
+   - Resized column widths persist to `localStorage` under `g-list-lite-column-widths-v1`.
+   - Column resizing is implemented through the table column config and `colgroup`, so future layout changes should keep using that path.
+   - Future desktop enhancement: add a visible `Reset columns` control if widths get awkward.
+   - Future wide-table enhancement: add a top horizontal scrollbar or sticky scroll proxy so users do not have to scroll to the bottom to move horizontally.
 
 3. Poster wall
    - Responsive grid.
@@ -189,11 +234,61 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 
 Do this after desktop works.
 
-- Table can become horizontally scrollable first.
-- Poster wall should become the primary mobile view.
-- Tap a card/title to open a preview sheet.
+- Desktop should keep the Wikipedia-style table as the primary view.
+- Tablet can still offer the table with horizontal scroll, but the Poster Wall should become the nicer/default view.
+- Phone should not use the full table as the primary experience. Use compact list/card rows instead.
+- On phone, each item should show title, media, release date, timeline/year, watch status, and watched year control.
+- Tap a card/title to open a preview sheet because hover does not exist reliably on touch.
 - Preview sheet has an `Open Wikipedia` link.
 - Tracking controls remain directly usable on the card or sheet.
+
+## Current Implementation Notes
+
+- This repo is a standalone Next app, separate from the original full `G-List` repo.
+- Dev server may need to run on `http://127.0.0.1:3001` because the original full app often occupies port `3000`.
+- `scripts/sync-gundam-wikipedia-lite.ts` pulls the Wikipedia `TV series, films, and video` table.
+- The sync parser must respect Wikipedia `rowspan` values. Do not infer a new title only from the presence of a link, because some valid title rows are plain text.
+- The sync parser must carry rowspanned values across continuation rows for `Name`, `Release date`, and `Timeline and year`.
+- Do not skip one-cell continuation rows. `Mobile Suit Gundam GQuuuuuuX` has a continuation row containing only `TV series: 12 episodes`; release date and timeline are carried by rowspans.
+- Plain-text title rows should render as plain text, not fake links back to the Gundam article.
+- The local data snapshot currently lives at `data/g-list-lite-media.json` and currently contains 94 rows from the Wikipedia table.
+- `npm run validate:wikipedia` currently confirms:
+  - Wikipedia rows: `94`
+  - Snapshot rows: `94`
+  - Snapshot matches the live Wikipedia media table.
+- The table currently renders from a column config in `app/page.tsx`; keep using that pattern before adding resizing.
+- The table renderer uses `spanKey` values to visually merge consecutive repeated cells and mimic Wikipedia rowspans.
+- Status tracking is stored in `localStorage` under `g-list-lite-tracking-v1`.
+- Column widths are stored in `localStorage` under `g-list-lite-column-widths-v1`.
+- Local state saves are gated until after localStorage has been loaded, so the first render does not wipe saved tracking or column widths.
+- Known checks:
+
+```text
+npm run sync:wikipedia
+npm run validate:wikipedia
+npm run lint
+npm run build
+```
+
+## Upgradeability Notes
+
+- The current layout is intentionally upgradeable.
+- Table columns are centralized in `app/page.tsx` as config, so future changes can alter labels, widths, renderers, sorting, visibility, and row-spanning behavior without rewriting every row.
+- Draggable desktop column resizing already builds on that config:
+  - Columns define `defaultWidth`, `minWidth`, and optional `maxWidth`.
+  - Resized widths are stored in `localStorage`.
+  - Widths are applied through the existing `colgroup`.
+  - Sorting uses the header button; resizing uses a separate header-edge handle so sort clicks and resize drags do not conflict.
+- Future layout changes should not require changing the Wikipedia sync format unless the data shape itself changes.
+- Keep the snapshot shape small and cloud-ready; add UI-only behavior in component state or local preferences rather than bloating `LiteMediaEntry`.
+- If adding phone/tablet layouts, keep the same data and tracking APIs:
+  - Desktop table can stay Wikipedia-like.
+  - Tablet can choose poster wall or horizontal table.
+  - Phone can use compact cards/list rows.
+- Before changing parser behavior, run `npm run validate:wikipedia`. Before changing table rendering, spot-check multi-row titles:
+  - `Mobile Suit Gundam GQuuuuuuX`
+  - `Mobile Suit Gundam: The Witch from Mercury`
+  - `Mobile Suit Gundam SEED Freedom Zero`
 
 ## Persistence Plan
 
@@ -240,15 +335,24 @@ npm audit --audit-level=moderate
 
 The full app is already committed in the original `G-List` repo and should stay separate.
 
-## First Implementation Task
+## Completed First Implementation Task
 
-Start by creating the Lite data snapshot.
+The first implementation task has been completed.
+
+Completed:
+
+1. Created a standalone Next app for `G-LIST-Lite`.
+2. Added `scripts/sync-gundam-wikipedia-lite.ts`.
+3. Preserved table rows and title links from the Wikipedia section.
+4. Fetches summaries/thumbnails for linked pages through MediaWiki APIs.
+5. Saves to `data/g-list-lite-media.json`.
+6. Built the first desktop table view from that snapshot.
 
 Recommended next steps:
 
-1. Create a new standalone Next app for `G-LIST-Lite`.
-2. Add a new sync script, likely `scripts/sync-gundam-wikipedia-lite.ts`.
-3. Preserve table rows and title links from the Wikipedia section.
-4. Fetch summaries/thumbnails for linked pages through MediaWiki APIs.
-5. Save to `data/g-list-lite-media.json`.
-6. Build the first desktop table view from that snapshot.
+1. Add a visible `Reset columns` control for resized table widths.
+2. Add a top horizontal scrollbar/sticky scroll proxy for wide table use.
+3. Build tablet and phone layouts:
+   - Tablet: poster wall as a strong/default option, table still available with horizontal scroll.
+   - Phone: compact list/card layout instead of full table.
+4. Add export/import JSON backup for local tracking.
