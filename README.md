@@ -229,6 +229,9 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
    - Do not add a top status filter beside `Poster Wall`; status grouping should happen through table sorting.
    - Desktop table columns are manually resizable by dragging the right edge of each header.
    - Resized column widths persist to `localStorage` under `g-list-lite-column-widths-v1`.
+   - Compact/mobile table widths use a separate profile under `g-list-lite-compact-column-widths-v1`.
+   - Compact/mobile table should start from each column's `minWidth`, but still allow resizing.
+   - Resizing/resetting columns on mobile must not overwrite desktop column widths.
    - Column resizing is implemented through the table column config and `colgroup`, so future layout changes should keep using that path.
    - Show a `Reset columns` control in table view when custom column widths are saved.
    - `Reset columns` should clear `g-list-lite-column-widths-v1` and restore default widths.
@@ -252,15 +255,19 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 
 ## Mobile Plan
 
-Do this after desktop works.
-
 - Desktop should keep the Wikipedia-style table as the primary view.
 - Tablet can still offer the table with horizontal scroll, but the Poster Wall should become the nicer/default view.
-- Phone should not use the full table as the primary experience. Use compact list/card rows instead.
+- Phone should not use the full table as the primary experience. Poster Wall becomes compact list/card rows through responsive CSS.
 - On phone, each item should show title, media, release date, timeline/year, watch status, and watched year control.
 - Tap a card/title to open a preview sheet because hover does not exist reliably on touch.
 - Preview sheet has an `Open Wikipedia` link.
 - Tracking controls remain directly usable on the card or sheet.
+- Current responsive behavior:
+  - Header width is allowed to become fluid on phone instead of using desktop table width.
+  - Table remains horizontally scrollable.
+  - Poster Wall becomes single-column compact rows on phone.
+  - Hover preview card is hidden on phone because hover is not reliable.
+  - Tap/click can open a preview sheet with summary, metadata, status, and an `Open Wikipedia` link.
 
 ## Current Implementation Notes
 
@@ -280,6 +287,7 @@ Do this after desktop works.
 - The table renderer uses `spanKey` values to visually merge consecutive repeated cells and mimic Wikipedia rowspans.
 - Status tracking is stored in `localStorage` under `g-list-lite-tracking-v1`.
 - Column widths are stored in `localStorage` under `g-list-lite-column-widths-v1`.
+- Compact/mobile column widths are stored separately under `g-list-lite-compact-column-widths-v1`.
 - Local state saves are gated until after localStorage has been loaded, so the first render does not wipe saved tracking or column widths.
 - Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
@@ -297,7 +305,8 @@ npm run build
 - Table columns are centralized in `app/page.tsx` as config, so future changes can alter labels, widths, renderers, sorting, visibility, and row-spanning behavior without rewriting every row.
 - Draggable desktop column resizing already builds on that config:
   - Columns define `defaultWidth`, `minWidth`, and optional `maxWidth`.
-  - Resized widths are stored in `localStorage`.
+  - Desktop resized widths are stored in `localStorage`.
+  - Compact/mobile resized widths are stored separately so they do not affect desktop.
   - Widths are applied through the existing `colgroup`.
   - Sorting uses the header button; resizing uses a separate header-edge handle so sort clicks and resize drags do not conflict.
 - Future layout changes should not require changing the Wikipedia sync format unless the data shape itself changes.
@@ -371,10 +380,7 @@ Completed:
 
 Recommended next steps:
 
-1. Build tablet and phone layouts:
-   - Tablet: poster wall as a strong/default option, table still available with horizontal scroll.
-   - Phone: compact list/card layout instead of full table.
-2. Consider poster wall refinements:
+1. Consider poster wall refinements:
    - Compact/dense card size toggle.
    - Hide poster controls until hover on desktop, but keep them always visible on touch.
    - Add a small watched-year badge on watched poster cards.

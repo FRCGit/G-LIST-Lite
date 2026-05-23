@@ -40,11 +40,12 @@ type ColumnWidths = Partial<Record<SortKey, number>>;
 
 const entries = mediaEntries as LiteMediaEntry[];
 const columnWidthsKey = "g-list-lite-column-widths-v1";
+const compactColumnWidthsKey = "g-list-lite-compact-column-widths-v1";
 const tableBorderAllowance = 2;
 
-function loadColumnWidths(): ColumnWidths {
+function loadColumnWidths(storageKey: string): ColumnWidths {
   try {
-    const saved = window.localStorage.getItem(columnWidthsKey);
+    const saved = window.localStorage.getItem(storageKey);
 
     if (!saved) {
       return {};
@@ -57,8 +58,8 @@ function loadColumnWidths(): ColumnWidths {
   }
 }
 
-function saveColumnWidths(widths: ColumnWidths): void {
-  window.localStorage.setItem(columnWidthsKey, JSON.stringify(widths));
+function saveColumnWidths(storageKey: string, widths: ColumnWidths): void {
+  window.localStorage.setItem(storageKey, JSON.stringify(widths));
 }
 
 function clampWidth(width: number, column: TableColumn): number {
@@ -106,7 +107,12 @@ export default function Home() {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<LiteMediaEntry | null>(null);
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({});
+  const [compactColumnWidths, setCompactColumnWidths] = useState<ColumnWidths>(
+    {}
+  );
+  const [usesCompactColumns, setUsesCompactColumns] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
@@ -114,8 +120,25 @@ export default function Home() {
 
   useEffect(() => {
     setTracking(loadTracking());
-    setColumnWidths(loadColumnWidths());
+    setColumnWidths(loadColumnWidths(columnWidthsKey));
+    setCompactColumnWidths(loadColumnWidths(compactColumnWidthsKey));
+    setUsesCompactColumns(window.matchMedia("(max-width: 760px)").matches);
     setHasLoadedLocalState(true);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 760px)");
+
+    function updateColumnProfile() {
+      setUsesCompactColumns(mediaQuery.matches);
+    }
+
+    updateColumnProfile();
+    mediaQuery.addEventListener("change", updateColumnProfile);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateColumnProfile);
+    };
   }, []);
 
   useEffect(() => {
@@ -126,9 +149,15 @@ export default function Home() {
 
   useEffect(() => {
     if (hasLoadedLocalState) {
-      saveColumnWidths(columnWidths);
+      saveColumnWidths(columnWidthsKey, columnWidths);
     }
   }, [columnWidths, hasLoadedLocalState]);
+
+  useEffect(() => {
+    if (hasLoadedLocalState) {
+      saveColumnWidths(compactColumnWidthsKey, compactColumnWidths);
+    }
+  }, [compactColumnWidths, hasLoadedLocalState]);
 
   const visibleEntries = useMemo(() => {
     const filteredEntries = filterEntries(entries, search);
@@ -176,6 +205,10 @@ export default function Home() {
     );
   }
 
+  function openPreviewSheet(entry: LiteMediaEntry) {
+    setSelectedEntry(entry);
+  }
+
   const tableColumns: TableColumn[] = [
     {
       key: "name",
@@ -188,6 +221,7 @@ export default function Home() {
       render: (entry) => (
         <TitleCell
           entry={entry}
+          onClick={openPreviewSheet}
           onMouseEnter={showPreview}
           onMouseLeave={() => setPreview(null)}
           onMouseMove={movePreview}
@@ -266,8 +300,13 @@ export default function Home() {
 
   const resolvedColumnWidths = tableColumns.reduce<Record<SortKey, number>>(
     (widths, column) => {
+      const activeWidths = usesCompactColumns ? compactColumnWidths : columnWidths;
+      const fallbackWidth = usesCompactColumns
+        ? column.minWidth
+        : column.defaultWidth;
+
       widths[column.key] = clampWidth(
-        columnWidths[column.key] ?? column.defaultWidth,
+        activeWidths[column.key] ?? fallbackWidth,
         column
       );
       return widths;
@@ -279,7 +318,9 @@ export default function Home() {
     (total, column) => total + resolvedColumnWidths[column.key],
     0
   );
-  const hasCustomColumnWidths = Object.keys(columnWidths).length > 0;
+  const hasCustomColumnWidths = Object.keys(
+    usesCompactColumns ? compactColumnWidths : columnWidths
+  ).length > 0;
 
   function resizeColumn(
     column: TableColumn,
@@ -299,6 +340,14 @@ export default function Home() {
         startWidth + moveEvent.clientX - startX,
         column
       );
+
+      if (usesCompactColumns) {
+        setCompactColumnWidths((current) => ({
+          ...current,
+          [column.key]: nextWidth
+        }));
+        return;
+      }
 
       setColumnWidths((current) => ({
         ...current,
@@ -332,6 +381,12 @@ export default function Home() {
   }
 
   function resetColumnWidths() {
+    if (usesCompactColumns) {
+      setCompactColumnWidths({});
+      window.localStorage.removeItem(compactColumnWidthsKey);
+      return;
+    }
+
     setColumnWidths({});
     window.localStorage.removeItem(columnWidthsKey);
   }
@@ -568,6 +623,11 @@ export default function Home() {
               <article
                 className="poster-card"
                 key={entry.id}
+                onClick={() => {
+                  if (window.matchMedia("(max-width: 760px)").matches) {
+                    openPreviewSheet(entry);
+                  }
+                }}
                 onMouseEnter={(event) => showPreview(entry, event)}
                 onMouseLeave={() => setPreview(null)}
                 onMouseMove={movePreview}
@@ -602,6 +662,14 @@ export default function Home() {
           left={Math.min(preview.x + 18, window.innerWidth - 340)}
           tracking={getTrackingForTitle(tracking, preview.entry.id)}
           top={Math.min(preview.y + 18, window.innerHeight - 360)}
+        />
+      ) : null}
+
+      {selectedEntry ? (
+        <PreviewSheet
+          entry={selectedEntry}
+          onClose={() => setSelectedEntry(null)}
+          tracking={getTrackingForTitle(tracking, selectedEntry.id)}
         />
       ) : null}
     </main>
@@ -647,12 +715,14 @@ function PosterTrackingControls({
 }
 
 function TitleCell({
+  onClick,
   entry,
   onMouseEnter,
   onMouseLeave,
   onMouseMove
 }: {
   entry: LiteMediaEntry;
+  onClick: (entry: LiteMediaEntry) => void;
   onMouseEnter: (entry: LiteMediaEntry, event: React.MouseEvent) => void;
   onMouseLeave: () => void;
   onMouseMove: (event: React.MouseEvent) => void;
@@ -660,6 +730,7 @@ function TitleCell({
   if (!entry.pageTitle) {
     return (
       <span
+        onClick={() => onClick(entry)}
         onMouseEnter={(event) => onMouseEnter(entry, event)}
         onMouseLeave={onMouseLeave}
         onMouseMove={onMouseMove}
@@ -672,6 +743,12 @@ function TitleCell({
   return (
     <a
       href={entry.sourceUrl}
+      onClick={(event) => {
+        if (window.matchMedia("(max-width: 760px)").matches) {
+          event.preventDefault();
+          onClick(entry);
+        }
+      }}
       onMouseEnter={(event) => onMouseEnter(entry, event)}
       onMouseLeave={onMouseLeave}
       onMouseMove={onMouseMove}
@@ -680,6 +757,76 @@ function TitleCell({
     >
       {entry.name}
     </a>
+  );
+}
+
+function PreviewSheet({
+  entry,
+  onClose,
+  tracking
+}: {
+  entry: LiteMediaEntry;
+  onClose: () => void;
+  tracking: LiteTrackingEntry;
+}) {
+  return (
+    <div className="sheet-backdrop" onClick={onClose} role="presentation">
+      <section
+        aria-modal="true"
+        className="preview-sheet"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <button className="sheet-close" onClick={onClose} type="button">
+          Close
+        </button>
+        <div className="sheet-content">
+          <div className="preview-media">
+            {entry.thumbnailUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt="" src={entry.thumbnailUrl} />
+            ) : (
+              <span>{entry.name}</span>
+            )}
+          </div>
+          <div className="preview-body">
+            <h2>{entry.name}</h2>
+            <p className="extract">{entry.extract ?? "No summary available."}</p>
+            <dl>
+              <div>
+                <dt>Media</dt>
+                <dd>{entry.media}</dd>
+              </div>
+              <div>
+                <dt>Release</dt>
+                <dd>{entry.releaseDate}</dd>
+              </div>
+              <div>
+                <dt>Timeline</dt>
+                <dd>{entry.timelineAndYear}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  {tracking.status}
+                  {tracking.watchedYear ? `, ${tracking.watchedYear}` : ""}
+                </dd>
+              </div>
+            </dl>
+            {entry.pageTitle ? (
+              <a
+                className="sheet-link"
+                href={entry.sourceUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Open Wikipedia
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
