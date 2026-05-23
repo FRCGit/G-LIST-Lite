@@ -236,14 +236,36 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
    - Show a `Reset columns` control in table view when custom column widths are saved.
    - `Reset columns` should clear `g-list-lite-column-widths-v1` and restore default widths.
    - Table view should include a top horizontal scrollbar synced with the table body so users do not have to scroll to the bottom to move horizontally.
+   - Hide the table body's bottom horizontal scrollbar; horizontal table movement should happen from the top synced scrollbar only.
 
 3. Poster wall
-   - Responsive grid.
-   - Comfortable / Compact density toggle.
-   - Poster density persists in `localStorage` under `g-list-lite-poster-density-v1`.
+   - Plex-inspired responsive poster grid.
+   - Design reference saved at `design/poster-wall-plex-reference.png`.
+   - Poster controls should follow the Plex-style toolbar reference:
+     - `View` icon group with poster/grid and table/list buttons.
+     - `Poster Size` slider with current size text.
+     - `Sort by` dropdown.
+     - `Filter` button and overflow menu affordance for future filtering/actions.
+     - Use the screenshot-style framed shell, thin top accent line, rounded dark toolbar, and left vertical icon rail.
+     - Header title and toolbar should be left-stacked from the same left edge; do not use a full-width divider under the title.
+     - The title, toolbar, count, and table/poster content should be centered together as one inner content block while keeping their shared left edge aligned.
+     - Use the same subtle rounded corner radius across the shell, toolbar controls, search/import/export buttons, status/year inputs, poster cards, and table outer frame.
+     - Treat the rail and content as one unified rounded outer frame. The rail is an internal column with a divider, not a separate bordered box.
+     - View group should only have two active icons for now: poster/grid and table/list.
+     - Left rail icons currently represent Table, Poster Wall, and Notes only.
+     - Notes view lists titles A-Z and saves per-title notes into the existing tracking localStorage object.
+   - Keep the toolbar accent blue for now to match the existing G-LIST link color, even though the Plex reference uses orange.
+   - Poster size uses a slider instead of named density buttons.
+   - Poster size persists in `localStorage` under `g-list-lite-poster-size-v1`.
+   - Old `g-list-lite-poster-density-v1` values are only used as migration fallback.
    - Poster frame, title, and compact metadata.
    - Temporarily hide poster art in Poster Wall until final visual pass; keep the frame size/aspect ratio stable.
    - Hover preview cards may still use thumbnails/posters.
+   - On mobile, keep the desktop slider label/control but bucket the poster wall into three visual sizes:
+     - Small: two-up poster cards, still with poster frames.
+     - Medium: centered larger poster cards.
+     - Large: single-column poster cards using the full available width.
+   - Do not bring back the no-poster/dense-list smallest mode unless explicitly requested.
    - Same tracking controls as table, but visually quieter.
    - Do not show disabled `Year` inputs on every poster card.
    - In poster view, show the year input only when status is `Watched`; otherwise the status select should use the full control width.
@@ -259,7 +281,7 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 
 - Desktop should keep the Wikipedia-style table as the primary view.
 - Tablet can still offer the table with horizontal scroll, but the Poster Wall should become the nicer/default view.
-- Phone should not use the full table as the primary experience. Poster Wall becomes compact list/card rows through responsive CSS.
+- Phone should not use the full table as the primary experience. Poster Wall becomes responsive poster cards with mobile-only Small/Medium/Large sizing through the existing poster-size slider.
 - On phone, each item should show title, media, release date, timeline/year, watch status, and watched year control.
 - Tap a card/title to open a preview sheet because hover does not exist reliably on touch.
 - Preview sheet has an `Open Wikipedia` link.
@@ -267,7 +289,7 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 - Current responsive behavior:
   - Header width is allowed to become fluid on phone instead of using desktop table width.
   - Table remains horizontally scrollable.
-  - Poster Wall becomes single-column compact rows on phone.
+  - Poster Wall uses mobile-only size buckets on phone: two-up small cards, centered medium cards, or full-width large cards.
   - Hover preview card is hidden on phone because hover is not reliable.
   - Tap/click can open a preview sheet with summary, metadata, status, and an `Open Wikipedia` link.
 
@@ -275,6 +297,14 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 
 - This repo is a standalone Next app, separate from the original full `G-List` repo.
 - Dev server may need to run on `http://127.0.0.1:3001` because the original full app often occupies port `3000`.
+- GitHub repo: `https://github.com/FRCGit/G-LIST-Lite`
+- Important workflow preference: do not push unless explicitly asked.
+- As of the latest session, local branch may be ahead of GitHub. Check with:
+
+```text
+git status --short --branch
+```
+
 - `scripts/sync-gundam-wikipedia-lite.ts` pulls the Wikipedia `TV series, films, and video` table.
 - The sync parser must respect Wikipedia `rowspan` values. Do not infer a new title only from the presence of a link, because some valid title rows are plain text.
 - The sync parser must carry rowspanned values across continuation rows for `Name`, `Release date`, and `Timeline and year`.
@@ -290,7 +320,7 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 - Status tracking is stored in `localStorage` under `g-list-lite-tracking-v1`.
 - Column widths are stored in `localStorage` under `g-list-lite-column-widths-v1`.
 - Compact/mobile column widths are stored separately under `g-list-lite-compact-column-widths-v1`.
-- Poster Wall density is stored in `localStorage` under `g-list-lite-poster-density-v1`.
+- Poster Wall size is stored in `localStorage` under `g-list-lite-poster-size-v1`; the old density key is migration-only.
 - Local state saves are gated until after localStorage has been loaded, so the first render does not wipe saved tracking or column widths.
 - Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
@@ -383,7 +413,22 @@ Completed:
 
 Recommended next steps:
 
-1. Consider poster wall refinements:
+1. Poster Wall direction:
+   - Current target is the Plex-style library grid from `design/poster-wall-plex-reference.png`.
+   - Poster Wall now uses a `Poster size` slider instead of `Small` / `Medium` / `Large`.
+   - The slider is saved under `g-list-lite-poster-size-v1`.
+   - Old saved density values migrate forward: old `Compact` / `Small` maps to a smaller slider value, old `Large` maps to a larger value.
+   - On phone, the smallest slider range hides the poster placeholder frame and reads like a dense list row.
+   - Target smallest mobile row shape:
+
+```text
+Mobile Suit Gundam
+TV series: 43 episodes · 1979-1980
+[Watched] [2019]
+```
+
+   - Normal and larger slider values keep the placeholder frame on phone.
+2. Consider poster wall refinements:
    - Hide poster controls until hover on desktop, but keep them always visible on touch.
    - Add a small watched-year badge on watched poster cards.
    - Add a detail sheet so the poster card itself can stay cleaner.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import mediaEntries from "../data/g-list-lite-media.json";
 import {
   filterEntries,
@@ -17,8 +18,7 @@ import type {
   WatchStatus
 } from "./lite-types";
 
-type ViewMode = "table" | "posters";
-type PosterDensity = "comfortable" | "compact";
+type ViewMode = "table" | "posters" | "notes";
 
 type PreviewState = {
   entry: LiteMediaEntry;
@@ -40,10 +40,20 @@ type TableColumn = {
 type ColumnWidths = Partial<Record<SortKey, number>>;
 
 const entries = mediaEntries as LiteMediaEntry[];
+const sortOptions: { key: SortKey; label: string }[] = [
+  { key: "name", label: "Name" },
+  { key: "media", label: "Media" },
+  { key: "releaseDate", label: "Release Date" },
+  { key: "timelineAndYear", label: "Timeline" },
+  { key: "status", label: "Watch Status" },
+  { key: "watchedYear", label: "Year" }
+];
 const columnWidthsKey = "g-list-lite-column-widths-v1";
 const compactColumnWidthsKey = "g-list-lite-compact-column-widths-v1";
 const posterDensityKey = "g-list-lite-poster-density-v1";
-const tableBorderAllowance = 2;
+const posterSizeKey = "g-list-lite-poster-size-v1";
+const tableBorderAllowance = 0;
+const defaultPosterSize = 170;
 
 function loadColumnWidths(storageKey: string): ColumnWidths {
   try {
@@ -64,9 +74,24 @@ function saveColumnWidths(storageKey: string, widths: ColumnWidths): void {
   window.localStorage.setItem(storageKey, JSON.stringify(widths));
 }
 
-function loadPosterDensity(): PosterDensity {
+function loadPosterSize(): number {
+  const savedSize = Number(window.localStorage.getItem(posterSizeKey));
+
+  if (Number.isFinite(savedSize) && savedSize >= 110 && savedSize <= 260) {
+    return savedSize;
+  }
+
   const saved = window.localStorage.getItem(posterDensityKey);
-  return saved === "compact" ? "compact" : "comfortable";
+
+  if (saved === "small" || saved === "compact") {
+    return 120;
+  }
+
+  if (saved === "large") {
+    return 220;
+  }
+
+  return defaultPosterSize;
 }
 
 function clampWidth(width: number, column: TableColumn): number {
@@ -107,13 +132,89 @@ function shouldRenderSpannedCell(
   return spanKey(tableEntries[index - 1]) !== spanKey(tableEntries[index]);
 }
 
+function GridIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <rect x="4" y="4" width="6" height="6" />
+      <rect x="14" y="4" width="6" height="6" />
+      <rect x="4" y="14" width="6" height="6" />
+      <rect x="14" y="14" width="6" height="6" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M8 6h12" />
+      <path d="M8 12h12" />
+      <path d="M8 18h12" />
+      <path d="M4 6h.01" />
+      <path d="M4 12h.01" />
+      <path d="M4 18h.01" />
+    </svg>
+  );
+}
+
+function NotepadIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M7 3h10a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path d="M9 8h6" />
+      <path d="M9 12h6" />
+      <path d="M9 16h4" />
+    </svg>
+  );
+}
+
+function FilterIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M4 5h16l-6 7v5l-4 2v-7z" />
+    </svg>
+  );
+}
+
+function RailButton({
+  active,
+  children,
+  label,
+  onClick
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className={active ? "active" : ""}
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="12" cy="5" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="12" cy="19" r="1.4" />
+    </svg>
+  );
+}
+
 export default function Home() {
   const [tracking, setTracking] = useState<Record<string, LiteTrackingEntry>>({});
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
-  const [posterDensity, setPosterDensity] =
-    useState<PosterDensity>("comfortable");
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [posterSize, setPosterSize] = useState(defaultPosterSize);
+  const [sortKey, setSortKey] = useState<SortKey | null>("releaseDate");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<LiteMediaEntry | null>(null);
@@ -131,7 +232,7 @@ export default function Home() {
     setTracking(loadTracking());
     setColumnWidths(loadColumnWidths(columnWidthsKey));
     setCompactColumnWidths(loadColumnWidths(compactColumnWidthsKey));
-    setPosterDensity(loadPosterDensity());
+    setPosterSize(loadPosterSize());
     setUsesCompactColumns(window.matchMedia("(max-width: 760px)").matches);
     setHasLoadedLocalState(true);
   }, []);
@@ -171,9 +272,9 @@ export default function Home() {
 
   useEffect(() => {
     if (hasLoadedLocalState) {
-      window.localStorage.setItem(posterDensityKey, posterDensity);
+      window.localStorage.setItem(posterSizeKey, String(posterSize));
     }
-  }, [hasLoadedLocalState, posterDensity]);
+  }, [hasLoadedLocalState, posterSize]);
 
   const visibleEntries = useMemo(() => {
     const filteredEntries = filterEntries(entries, search);
@@ -184,6 +285,23 @@ export default function Home() {
 
     return sortEntries(filteredEntries, tracking, sortKey, sortDirection);
   }, [search, sortDirection, sortKey, tracking]);
+  const notesEntries = useMemo(() => {
+    return filterEntries(entries, search).sort((a, b) => {
+      const nameResult = a.name.localeCompare(b.name, undefined, {
+        numeric: true,
+        sensitivity: "base"
+      });
+
+      if (nameResult !== 0) {
+        return nameResult;
+      }
+
+      return a.releaseDate.localeCompare(b.releaseDate, undefined, {
+        numeric: true,
+        sensitivity: "base"
+      });
+    });
+  }, [search]);
 
   function updateTracking(titleId: string, update: Partial<LiteTrackingEntry>) {
     setTracking((current) => {
@@ -337,6 +455,12 @@ export default function Home() {
   const hasCustomColumnWidths = Object.keys(
     usesCompactColumns ? compactColumnWidths : columnWidths
   ).length > 0;
+  const mobilePosterSizeClass =
+    posterSize < 150
+      ? "poster-mobile-small"
+      : posterSize < 210
+        ? "poster-mobile-medium"
+        : "poster-mobile-large";
 
   function resizeColumn(
     column: TableColumn,
@@ -465,48 +589,121 @@ export default function Home() {
 
   return (
     <main className="app-shell">
+      <aside className="side-rail" aria-label="Library sections">
+        <RailButton
+          active={viewMode === "table"}
+          label="Library table"
+          onClick={() => setViewMode("table")}
+        >
+          <ListIcon />
+        </RailButton>
+        <RailButton
+          active={viewMode === "posters"}
+          label="Poster wall"
+          onClick={() => setViewMode("posters")}
+        >
+          <GridIcon />
+        </RailButton>
+        <RailButton
+          active={viewMode === "notes"}
+          label="Notes"
+          onClick={() => setViewMode("notes")}
+        >
+          <NotepadIcon />
+        </RailButton>
+      </aside>
+
+      <div className="content-shell">
+      <div className="content-inner" style={{ width: `${tableWidth}px` }}>
       <header className="topbar" style={{ width: `${tableWidth}px` }}>
         <div>
           <h1>G-LIST</h1>
-          <p>{visibleEntries.length} titles</p>
         </div>
 
         <div className="controls">
-          <div className="segmented" aria-label="View mode">
-            <button
-              className={viewMode === "table" ? "active" : ""}
-              onClick={() => setViewMode("table")}
-              type="button"
-            >
-              Table
+          <div className="poster-toolbar" aria-label="Library controls">
+            <div className="toolbar-view-group">
+              <span>View</span>
+              <div className="icon-segmented" aria-label="View mode">
+                <button
+                  aria-label="Table view"
+                  className={viewMode === "table" ? "active" : ""}
+                  onClick={() => setViewMode("table")}
+                  title="Table"
+                  type="button"
+                >
+                  <ListIcon />
+                </button>
+                <button
+                  aria-label="Poster wall view"
+                  className={viewMode === "posters" ? "active" : ""}
+                  onClick={() => setViewMode("posters")}
+                  title="Poster Wall"
+                  type="button"
+                >
+                  <GridIcon />
+                </button>
+              </div>
+            </div>
+
+            {viewMode === "posters" ? (
+              <div className="poster-size-control">
+                <label htmlFor="poster-size">Poster Size</label>
+                <input
+                  id="poster-size"
+                  max="240"
+                  min="110"
+                  onChange={(event) => setPosterSize(Number(event.target.value))}
+                  step="10"
+                  type="range"
+                  value={posterSize}
+                />
+                <span className="poster-size-value">
+                  {posterSize < 150
+                    ? "Small"
+                    : posterSize < 210
+                      ? "Medium"
+                      : "Large"}
+                </span>
+                <div className="poster-size-labels" aria-hidden="true">
+                  <span>Small</span>
+                  <span>Medium</span>
+                  <span>Large</span>
+                </div>
+              </div>
+            ) : null}
+
+            <label className="sort-control">
+              <span>Sort by</span>
+              <select
+                aria-label="Sort by"
+                onChange={(event) => {
+                  setSortKey(event.target.value as SortKey);
+                  setSortDirection("asc");
+                }}
+                value={sortKey ?? "releaseDate"}
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button className="filter-button" type="button">
+              <FilterIcon />
+              <span>Filter</span>
             </button>
+
             <button
-              className={viewMode === "posters" ? "active" : ""}
-              onClick={() => setViewMode("posters")}
+              aria-label="More options"
+              className="more-button"
               type="button"
             >
-              Poster Wall
+              <MoreIcon />
             </button>
           </div>
-
-          {viewMode === "posters" ? (
-            <div className="density-toggle" aria-label="Poster density">
-              <button
-                className={posterDensity === "comfortable" ? "active" : ""}
-                onClick={() => setPosterDensity("comfortable")}
-                type="button"
-              >
-                Comfortable
-              </button>
-              <button
-                className={posterDensity === "compact" ? "active" : ""}
-                onClick={() => setPosterDensity("compact")}
-                type="button"
-              >
-                Compact
-              </button>
-            </div>
-          ) : null}
 
           {viewMode === "table" && hasCustomColumnWidths ? (
             <button
@@ -547,6 +744,7 @@ export default function Home() {
           />
         </div>
       </header>
+      <p className="item-count">{visibleEntries.length} titles</p>
 
       {entries.length === 0 ? (
         <section className="empty-state">
@@ -649,9 +847,39 @@ export default function Home() {
             </table>
           </div>
         </section>
+      ) : viewMode === "notes" ? (
+        <section className="notes-list" aria-label="Gundam title notes">
+          {notesEntries.map((entry) => {
+            const entryTracking = getTrackingForTitle(tracking, entry.id);
+
+            return (
+              <article className="note-card" key={entry.id}>
+                <div className="note-card-header">
+                  <h2>{entry.name}</h2>
+                  <p>
+                    {entry.media} &middot; {entry.releaseDate}
+                  </p>
+                </div>
+                <textarea
+                  aria-label={`Notes for ${entry.name}`}
+                  onChange={(event) =>
+                    updateTracking(entry.id, { notes: event.target.value })
+                  }
+                  placeholder="Notes"
+                  value={entryTracking.notes ?? ""}
+                />
+              </article>
+            );
+          })}
+        </section>
       ) : (
         <section
-          className={`poster-grid poster-${posterDensity}`}
+          className={`poster-grid ${mobilePosterSizeClass}`}
+          style={
+            {
+              "--poster-size": `${posterSize}px`
+            } as CSSProperties
+          }
           aria-label="Gundam poster wall"
         >
           {visibleEntries.map((entry) => {
@@ -693,6 +921,8 @@ export default function Home() {
           })}
         </section>
       )}
+      </div>
+      </div>
 
       {preview ? (
         <PreviewCard
