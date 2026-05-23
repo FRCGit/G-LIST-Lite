@@ -115,19 +115,30 @@ a:hover {
   min-width: 210px;
 }
 
-.segmented button {
+.segmented button,
+.density-toggle button {
   border: 0;
   border-right: 1px solid var(--line);
   padding: 0 12px;
 }
 
-.segmented button:last-child {
+.segmented button:last-child,
+.density-toggle button:last-child {
   border-right: 0;
 }
 
-.segmented .active {
+.segmented .active,
+.density-toggle .active {
   background: #202122;
   color: #ffffff;
+}
+
+.density-toggle {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 34px;
+  min-width: 230px;
 }
 
 .status-select {
@@ -345,9 +356,18 @@ tbody tr:hover td {
   max-width: 1460px;
 }
 
+.poster-grid.poster-compact {
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
 @media (max-width: 1100px) {
   .poster-grid {
     grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  }
+
+  .poster-grid.poster-compact {
+    grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
   }
 }
 
@@ -359,6 +379,11 @@ tbody tr:hover td {
   flex-direction: column;
   min-height: 360px;
   padding: 10px;
+}
+
+.poster-compact .poster-card {
+  min-height: 300px;
+  padding: 8px;
 }
 
 .poster-card:hover {
@@ -382,6 +407,11 @@ tbody tr:hover td {
   text-align: center;
 }
 
+.poster-compact .poster-frame {
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
 .poster-frame img {
   height: 100%;
   object-fit: cover;
@@ -396,11 +426,19 @@ tbody tr:hover td {
   margin: 0 0 6px;
 }
 
+.poster-compact .poster-card h2 {
+  font-size: 14px;
+}
+
 .poster-card p {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
   margin: 0 0 10px;
+}
+
+.poster-compact .poster-card p {
+  font-size: 11px;
 }
 
 .poster-controls {
@@ -585,6 +623,7 @@ dd {
 
   .search,
   .segmented,
+  .density-toggle,
   .reset-columns,
   .utility-button {
     min-width: 0;

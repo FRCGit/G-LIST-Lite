@@ -239,6 +239,8 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 
 3. Poster wall
    - Responsive grid.
+   - Comfortable / Compact density toggle.
+   - Poster density persists in `localStorage` under `g-list-lite-poster-density-v1`.
    - Poster frame, title, and compact metadata.
    - Temporarily hide poster art in Poster Wall until final visual pass; keep the frame size/aspect ratio stable.
    - Hover preview cards may still use thumbnails/posters.
@@ -288,6 +290,7 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 - Status tracking is stored in `localStorage` under `g-list-lite-tracking-v1`.
 - Column widths are stored in `localStorage` under `g-list-lite-column-widths-v1`.
 - Compact/mobile column widths are stored separately under `g-list-lite-compact-column-widths-v1`.
+- Poster Wall density is stored in `localStorage` under `g-list-lite-poster-density-v1`.
 - Local state saves are gated until after localStorage has been loaded, so the first render does not wipe saved tracking or column widths.
 - Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
@@ -381,7 +384,6 @@ Completed:
 Recommended next steps:
 
 1. Consider poster wall refinements:
-   - Compact/dense card size toggle.
    - Hide poster controls until hover on desktop, but keep them always visible on touch.
    - Add a small watched-year badge on watched poster cards.
    - Add a detail sheet so the poster card itself can stay cleaner.

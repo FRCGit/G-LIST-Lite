@@ -18,6 +18,7 @@ import type {
 } from "./lite-types";
 
 type ViewMode = "table" | "posters";
+type PosterDensity = "comfortable" | "compact";
 
 type PreviewState = {
   entry: LiteMediaEntry;
@@ -41,6 +42,7 @@ type ColumnWidths = Partial<Record<SortKey, number>>;
 const entries = mediaEntries as LiteMediaEntry[];
 const columnWidthsKey = "g-list-lite-column-widths-v1";
 const compactColumnWidthsKey = "g-list-lite-compact-column-widths-v1";
+const posterDensityKey = "g-list-lite-poster-density-v1";
 const tableBorderAllowance = 2;
 
 function loadColumnWidths(storageKey: string): ColumnWidths {
@@ -60,6 +62,11 @@ function loadColumnWidths(storageKey: string): ColumnWidths {
 
 function saveColumnWidths(storageKey: string, widths: ColumnWidths): void {
   window.localStorage.setItem(storageKey, JSON.stringify(widths));
+}
+
+function loadPosterDensity(): PosterDensity {
+  const saved = window.localStorage.getItem(posterDensityKey);
+  return saved === "compact" ? "compact" : "comfortable";
 }
 
 function clampWidth(width: number, column: TableColumn): number {
@@ -104,6 +111,8 @@ export default function Home() {
   const [tracking, setTracking] = useState<Record<string, LiteTrackingEntry>>({});
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [posterDensity, setPosterDensity] =
+    useState<PosterDensity>("comfortable");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [preview, setPreview] = useState<PreviewState | null>(null);
@@ -122,6 +131,7 @@ export default function Home() {
     setTracking(loadTracking());
     setColumnWidths(loadColumnWidths(columnWidthsKey));
     setCompactColumnWidths(loadColumnWidths(compactColumnWidthsKey));
+    setPosterDensity(loadPosterDensity());
     setUsesCompactColumns(window.matchMedia("(max-width: 760px)").matches);
     setHasLoadedLocalState(true);
   }, []);
@@ -158,6 +168,12 @@ export default function Home() {
       saveColumnWidths(compactColumnWidthsKey, compactColumnWidths);
     }
   }, [compactColumnWidths, hasLoadedLocalState]);
+
+  useEffect(() => {
+    if (hasLoadedLocalState) {
+      window.localStorage.setItem(posterDensityKey, posterDensity);
+    }
+  }, [hasLoadedLocalState, posterDensity]);
 
   const visibleEntries = useMemo(() => {
     const filteredEntries = filterEntries(entries, search);
@@ -473,6 +489,25 @@ export default function Home() {
             </button>
           </div>
 
+          {viewMode === "posters" ? (
+            <div className="density-toggle" aria-label="Poster density">
+              <button
+                className={posterDensity === "comfortable" ? "active" : ""}
+                onClick={() => setPosterDensity("comfortable")}
+                type="button"
+              >
+                Comfortable
+              </button>
+              <button
+                className={posterDensity === "compact" ? "active" : ""}
+                onClick={() => setPosterDensity("compact")}
+                type="button"
+              >
+                Compact
+              </button>
+            </div>
+          ) : null}
+
           {viewMode === "table" && hasCustomColumnWidths ? (
             <button
               className="reset-columns"
@@ -615,7 +650,10 @@ export default function Home() {
           </div>
         </section>
       ) : (
-        <section className="poster-grid" aria-label="Gundam poster wall">
+        <section
+          className={`poster-grid poster-${posterDensity}`}
+          aria-label="Gundam poster wall"
+        >
           {visibleEntries.map((entry) => {
             const entryTracking = getTrackingForTitle(tracking, entry.id);
 
