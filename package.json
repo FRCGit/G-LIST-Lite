@@ -11,6 +11,7 @@
     "validate:wikipedia": "tsx scripts/validate-wikipedia-snapshot.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.1",
     "cheerio": "1.0.0",
     "next": "^16.2.6",
     "react": "^19.2.5",

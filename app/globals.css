@@ -173,18 +173,41 @@ a:hover {
   margin: 0 0 6px;
 }
 
+.topbar-heading {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.topbar-heading h1 {
+  margin: 0;
+}
+
 .item-count {
   color: var(--muted);
   margin: 12px 0 14px;
 }
 
 .controls {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-start;
   width: 100%;
+}
+
+.primary-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primary-controls {
+  flex: 0 1 auto;
 }
 
 .poster-toolbar {
@@ -256,7 +279,6 @@ a:hover {
 }
 
 .icon-segmented svg,
-.filter-button svg,
 .more-button svg {
   fill: none;
   height: 18px;
@@ -275,9 +297,224 @@ a:hover {
   background: #111820;
   border-color: #27323d;
   border-radius: var(--radius);
+  flex: 0 0 min(260px, 100%);
   height: 50px;
-  min-width: 260px;
+  min-width: 0;
   padding: 0 14px;
+}
+
+.account-control {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  min-height: 40px;
+  position: relative;
+}
+
+.account-button {
+  align-items: center;
+  background: #111820;
+  border: 1px solid #27323d;
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  height: 40px;
+  justify-content: center;
+  padding: 0 13px;
+  white-space: nowrap;
+}
+
+.account-button:disabled {
+  cursor: default;
+  opacity: 0.68;
+}
+
+.account-chip {
+  padding-left: 8px;
+}
+
+.account-initial {
+  align-items: center;
+  background: color-mix(in srgb, var(--link) 30%, #17202a);
+  border: 1px solid color-mix(in srgb, var(--link) 65%, transparent);
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.account-menu-wrap {
+  position: relative;
+}
+
+.account-menu {
+  background: #111820;
+  border: 1px solid #27323d;
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.34);
+  min-width: 260px;
+  padding: 12px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 35;
+}
+
+.account-email,
+.account-status {
+  margin: 0;
+}
+
+.account-email {
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.account-status {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.account-menu-action {
+  background: transparent;
+  border: 1px solid #27323d;
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  height: 36px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgb(0 0 0 / 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 22px;
+  position: fixed;
+  z-index: 60;
+}
+
+.sign-in-modal {
+  background: #111820;
+  border: 1px solid #27323d;
+  border-radius: var(--radius);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.46);
+  display: grid;
+  gap: 12px;
+  max-width: 380px;
+  padding: 20px;
+  position: relative;
+  width: min(100%, 380px);
+}
+
+.sign-in-modal h2 {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.sign-in-modal p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.modal-close {
+  align-items: center;
+  background: transparent;
+  border: 1px solid #27323d;
+  border-radius: var(--radius);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 18px;
+  height: 32px;
+  justify-content: center;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 32px;
+}
+
+.sign-in-submit {
+  width: 100%;
+}
+
+.secondary-auth-button {
+  background: transparent;
+  border: 1px solid #27323d;
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  height: 42px;
+  padding: 0 14px;
+  width: 100%;
+}
+
+.secondary-auth-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.modal-status {
+  min-height: 18px;
+}
+
+.cloud-email {
+  background: #111820;
+  border-color: #27323d;
+  border-radius: var(--radius);
+  flex: 0 0 210px;
+  height: 50px;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-input {
+  padding-right: 48px;
+  width: 100%;
+}
+
+.password-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  height: 40px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 6px;
+  top: 5px;
+  width: 40px;
+}
+
+.password-toggle svg {
+  fill: none;
+  height: 18px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 18px;
 }
 
 .segmented {
@@ -376,7 +613,6 @@ a:hover {
   padding: 0 32px 0 12px;
 }
 
-.filter-button,
 .more-button {
   align-items: center;
   background: #1a2129;
@@ -385,7 +621,6 @@ a:hover {
   color: var(--text);
   cursor: pointer;
   display: flex;
-  gap: 8px;
   height: 36px;
   justify-content: center;
   padding: 0 12px;
@@ -976,10 +1211,23 @@ dd {
     width: auto !important;
   }
 
+  .topbar-heading {
+    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .controls {
     display: grid;
     grid-template-columns: 1fr;
     justify-content: stretch;
+  }
+
+  .primary-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-left: 0;
+    width: 100%;
   }
 
   .poster-toolbar {
@@ -1001,6 +1249,9 @@ dd {
   }
 
   .search,
+  .account-control,
+  .account-button,
+  .cloud-email,
   .poster-toolbar,
   .sort-control select,
   .poster-size-control,
@@ -1008,6 +1259,15 @@ dd {
   .utility-button {
     min-width: 0;
     width: 100%;
+  }
+
+  .account-control {
+    justify-content: stretch;
+  }
+
+  .account-menu {
+    left: 0;
+    right: auto;
   }
 
   .poster-size-control {
@@ -1023,10 +1283,6 @@ dd {
     justify-content: space-between;
     line-height: 1;
     margin-top: -2px;
-  }
-
-  .filter-button {
-    width: 100%;
   }
 
   .more-button {

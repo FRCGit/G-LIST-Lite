@@ -9,6 +9,14 @@ import {
   sortEntries,
   watchStatuses
 } from "./lite-helpers";
+import {
+  getSupabaseClient,
+  isCloudConfigured,
+  loadCloudTracking,
+  mergeTracking,
+  upsertCloudTrackingBatch,
+  type CloudUser
+} from "./lite-cloud-storage";
 import { loadTracking, saveTracking } from "./lite-storage";
 import type {
   LiteMediaEntry,
@@ -38,6 +46,7 @@ type TableColumn = {
 };
 
 type ColumnWidths = Partial<Record<SortKey, number>>;
+type CloudAuthState = "checking" | "signedOut" | "signedIn";
 
 const entries = mediaEntries as LiteMediaEntry[];
 const sortOptions: { key: SortKey; label: string }[] = [
@@ -54,7 +63,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.24.1";
+const appVersion = "v2026.05.24.2";
 
 type TableDragState = {
   pointerId: number;
@@ -178,14 +187,6 @@ function NotepadIcon() {
   );
 }
 
-function FilterIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path d="M4 5h16l-6 7v5l-4 2v-7z" />
-    </svg>
-  );
-}
-
 function RailButton({
   active,
   children,
@@ -220,6 +221,26 @@ function MoreIcon() {
   );
 }
 
+function EyeIcon({ hidden }: { hidden: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      {hidden ? (
+        <>
+          <path d="M3 3l18 18" />
+          <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+          <path d="M9.9 5.2A9.8 9.8 0 0 1 12 5c5 0 8.5 4.5 9.6 6.4a1.2 1.2 0 0 1 0 1.2 17.4 17.4 0 0 1-2.2 2.8" />
+          <path d="M6.2 6.5a17.3 17.3 0 0 0-3.8 4.9 1.2 1.2 0 0 0 0 1.2C3.5 14.5 7 19 12 19a9.7 9.7 0 0 0 4.1-.9" />
+        </>
+      ) : (
+        <>
+          <path d="M2.4 11.4C3.5 9.5 7 5 12 5s8.5 4.5 9.6 6.4a1.2 1.2 0 0 1 0 1.2C20.5 14.5 17 19 12 19s-8.5-4.5-9.6-6.4a1.2 1.2 0 0 1 0-1.2z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function Home() {
   const [tracking, setTracking] = useState<Record<string, LiteTrackingEntry>>({});
   const [search, setSearch] = useState("");
@@ -235,11 +256,26 @@ export default function Home() {
   );
   const [usesCompactColumns, setUsesCompactColumns] = useState(false);
   const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
+  const [cloudUser, setCloudUser] = useState<CloudUser | null>(null);
+  const [cloudAuthState, setCloudAuthState] = useState<CloudAuthState>(
+    isCloudConfigured() ? "checking" : "signedOut"
+  );
+  const [hasHydratedCloud, setHasHydratedCloud] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [showAuthPassword, setShowAuthPassword] = useState(false);
+  const [cloudMessage, setCloudMessage] = useState(
+    isCloudConfigured() ? "Cloud sync signed out" : "Cloud sync not configured"
+  );
+  const [isCloudBusy, setIsCloudBusy] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const tableDragRef = useRef<TableDragState | null>(null);
   const tableMomentumRef = useRef<number | null>(null);
+  const trackingRef = useRef<Record<string, LiteTrackingEntry>>({});
 
   useEffect(() => {
     setTracking(loadTracking());
@@ -269,7 +305,109 @@ export default function Home() {
     if (hasLoadedLocalState) {
       saveTracking(tracking);
     }
+
+    trackingRef.current = tracking;
   }, [hasLoadedLocalState, tracking]);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      setCloudAuthState("signedOut");
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      const sessionUser = data.session?.user ?? null;
+
+      setCloudUser(sessionUser);
+      setCloudAuthState(sessionUser ? "signedIn" : "signedOut");
+    });
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const sessionUser = session?.user ?? null;
+
+      setCloudUser(sessionUser);
+      setCloudAuthState(sessionUser ? "signedIn" : "signedOut");
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedLocalState || !cloudUser) {
+      setHasHydratedCloud(false);
+      return;
+    }
+
+    let isCurrent = true;
+    const activeCloudUser = cloudUser;
+
+    async function hydrateCloudTracking() {
+      setIsCloudBusy(true);
+      setCloudMessage("Syncing cloud data");
+
+      try {
+        const cloudTracking = await loadCloudTracking(activeCloudUser.id);
+        const mergedTracking = mergeTracking(trackingRef.current, cloudTracking);
+
+        if (!isCurrent) {
+          return;
+        }
+
+        setTracking(mergedTracking);
+        saveTracking(mergedTracking);
+        await upsertCloudTrackingBatch(
+          activeCloudUser.id,
+          Object.values(mergedTracking)
+        );
+
+        if (isCurrent) {
+          setHasHydratedCloud(true);
+          setCloudMessage(`Cloud sync on: ${activeCloudUser.email ?? "signed in"}`);
+        }
+      } catch {
+        if (isCurrent) {
+          setCloudMessage("Cloud sync needs attention");
+        }
+      } finally {
+        if (isCurrent) {
+          setIsCloudBusy(false);
+        }
+      }
+    }
+
+    hydrateCloudTracking();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [cloudUser, hasLoadedLocalState]);
+
+  useEffect(() => {
+    if (!cloudUser || !hasHydratedCloud || !hasLoadedLocalState) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCloudMessage("Saving to cloud");
+      upsertCloudTrackingBatch(cloudUser.id, Object.values(tracking))
+        .then(() => {
+          setCloudMessage(`Cloud sync on: ${cloudUser.email ?? "signed in"}`);
+        })
+        .catch(() => {
+          setCloudMessage("Cloud save failed");
+        });
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [cloudUser, hasHydratedCloud, hasLoadedLocalState, tracking]);
 
   useEffect(() => {
     if (hasLoadedLocalState) {
@@ -288,6 +426,15 @@ export default function Home() {
       window.localStorage.setItem(posterSizeKey, String(posterSize));
     }
   }, [hasLoadedLocalState, posterSize]);
+
+  useEffect(() => {
+    if (cloudUser) {
+      setIsSignInOpen(false);
+      return;
+    }
+
+    setIsAccountMenuOpen(false);
+  }, [cloudUser]);
 
   const visibleEntries = useMemo(() => {
     const filteredEntries = filterEntries(entries, search);
@@ -319,7 +466,11 @@ export default function Home() {
   function updateTracking(titleId: string, update: Partial<LiteTrackingEntry>) {
     setTracking((current) => {
       const previous = getTrackingForTitle(current, titleId);
-      const next: LiteTrackingEntry = { ...previous, ...update };
+      const next: LiteTrackingEntry = {
+        ...previous,
+        ...update,
+        updatedAt: new Date().toISOString()
+      };
 
       if (next.status !== "Watched") {
         delete next.watchedYear;
@@ -330,6 +481,85 @@ export default function Home() {
         [titleId]: next
       };
     });
+  }
+
+  async function signInWithPassword() {
+    const supabase = getSupabaseClient();
+    const email = authEmail.trim();
+    const password = authPassword;
+
+    if (!supabase || !email || !password) {
+      return;
+    }
+
+    setIsCloudBusy(true);
+    setCloudMessage("Signing in");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    setIsCloudBusy(false);
+
+    if (error) {
+      setCloudMessage(error.message || "Sign in failed");
+      return;
+    }
+
+    setCloudMessage("Signed in");
+  }
+
+  async function createAccountWithPassword() {
+    const supabase = getSupabaseClient();
+    const email = authEmail.trim();
+    const password = authPassword;
+
+    if (!supabase || !email || !password) {
+      return;
+    }
+
+    if (password.length < 6) {
+      setCloudMessage("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsCloudBusy(true);
+    setCloudMessage("Creating account");
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password
+    });
+
+    setIsCloudBusy(false);
+
+    if (error) {
+      setCloudMessage(error.message || "Account creation failed");
+      return;
+    }
+
+    setCloudMessage("Account created. Check email if confirmation is required");
+  }
+
+  async function signOut() {
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      return;
+    }
+
+    setIsCloudBusy(true);
+    await supabase.auth.signOut();
+    setCloudUser(null);
+    setCloudAuthState("signedOut");
+    setHasHydratedCloud(false);
+    setCloudMessage("Cloud sync signed out");
+    setIsCloudBusy(false);
+  }
+
+  function getAccountInitial() {
+    return (cloudUser?.email?.trim()[0] ?? "G").toUpperCase();
   }
 
   function showPreview(entry: LiteMediaEntry, event: React.MouseEvent) {
@@ -826,123 +1056,169 @@ export default function Home() {
       <div className="content-shell">
       <div className="content-inner" style={{ width: `${tableWidth}px` }}>
       <header className="topbar" style={{ width: `${tableWidth}px` }}>
-        <div>
+        <div className="topbar-heading">
           <h1>G-LIST</h1>
+
+          <div className="account-control" aria-label="Account">
+            {cloudAuthState === "checking" ? (
+              <button
+                className="account-button"
+                disabled
+                type="button"
+              >
+                Checking
+              </button>
+            ) : cloudUser ? (
+              <div className="account-menu-wrap">
+                <button
+                  aria-expanded={isAccountMenuOpen}
+                  className="account-button account-chip"
+                  onClick={() => setIsAccountMenuOpen((open) => !open)}
+                  type="button"
+                >
+                  <span className="account-initial">{getAccountInitial()}</span>
+                  <span>Synced</span>
+                  <span aria-hidden="true">▾</span>
+                </button>
+
+                {isAccountMenuOpen ? (
+                  <div className="account-menu">
+                    <p className="account-email">{cloudUser.email}</p>
+                    <p className="account-status">{cloudMessage}</p>
+                    <button
+                      className="account-menu-action"
+                      disabled={isCloudBusy}
+                      onClick={signOut}
+                      type="button"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <button
+                className="account-button"
+                disabled={!isCloudConfigured()}
+                onClick={() => setIsSignInOpen(true)}
+                type="button"
+              >
+                Sign in
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="controls">
-          <div className="poster-toolbar" aria-label="Library controls">
-            <div className="toolbar-view-group">
-              <span>View</span>
-              <div className="icon-segmented" aria-label="View mode">
-                <button
-                  aria-label="Table view"
-                  className={viewMode === "table" ? "active" : ""}
-                  onClick={() => setViewMode("table")}
-                  title="Table"
-                  type="button"
-                >
-                  <ListIcon />
-                </button>
-                <button
-                  aria-label="Poster wall view"
-                  className={viewMode === "posters" ? "active" : ""}
-                  onClick={() => setViewMode("posters")}
-                  title="Poster Wall"
-                  type="button"
-                >
-                  <GridIcon />
-                </button>
-              </div>
-            </div>
-
-            {viewMode === "posters" ? (
-              <div className="poster-size-control">
-                <label htmlFor="poster-size">Poster Size</label>
-                <input
-                  id="poster-size"
-                  max="240"
-                  min="110"
-                  onChange={(event) => setPosterSize(Number(event.target.value))}
-                  step="10"
-                  type="range"
-                  value={posterSize}
-                />
-                <span className="poster-size-value">
-                  {posterSize < 150
-                    ? "Small"
-                    : posterSize < 210
-                      ? "Medium"
-                      : "Large"}
-                </span>
-                <div className="poster-size-labels" aria-hidden="true">
-                  <span>Small</span>
-                  <span>Medium</span>
-                  <span>Large</span>
+          <div className="primary-controls">
+            <div className="poster-toolbar" aria-label="Library controls">
+              <div className="toolbar-view-group">
+                <span>View</span>
+                <div className="icon-segmented" aria-label="View mode">
+                  <button
+                    aria-label="Table view"
+                    className={viewMode === "table" ? "active" : ""}
+                    onClick={() => setViewMode("table")}
+                    title="Table"
+                    type="button"
+                  >
+                    <ListIcon />
+                  </button>
+                  <button
+                    aria-label="Poster wall view"
+                    className={viewMode === "posters" ? "active" : ""}
+                    onClick={() => setViewMode("posters")}
+                    title="Poster Wall"
+                    type="button"
+                  >
+                    <GridIcon />
+                  </button>
                 </div>
               </div>
+
+              {viewMode === "posters" ? (
+                <div className="poster-size-control">
+                  <label htmlFor="poster-size">Poster Size</label>
+                  <input
+                    id="poster-size"
+                    max="240"
+                    min="110"
+                    onChange={(event) => setPosterSize(Number(event.target.value))}
+                    step="10"
+                    type="range"
+                    value={posterSize}
+                  />
+                  <span className="poster-size-value">
+                    {posterSize < 150
+                      ? "Small"
+                      : posterSize < 210
+                        ? "Medium"
+                        : "Large"}
+                  </span>
+                  <div className="poster-size-labels" aria-hidden="true">
+                    <span>Small</span>
+                    <span>Medium</span>
+                    <span>Large</span>
+                  </div>
+                </div>
+              ) : null}
+
+              <label className="sort-control">
+                <span>Sort by</span>
+                <select
+                  aria-label="Sort by"
+                  onChange={(event) => {
+                    setSortKey(event.target.value as SortKey);
+                    setSortDirection("asc");
+                  }}
+                  value={sortKey ?? "releaseDate"}
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                aria-label="More options"
+                className="more-button"
+                type="button"
+              >
+                <MoreIcon />
+              </button>
+            </div>
+
+            {viewMode === "table" && hasCustomColumnWidths ? (
+              <button
+                className="reset-columns"
+                onClick={resetColumnWidths}
+                type="button"
+              >
+                Reset columns
+              </button>
             ) : null}
 
-            <label className="sort-control">
-              <span>Sort by</span>
-              <select
-                aria-label="Sort by"
-                onChange={(event) => {
-                  setSortKey(event.target.value as SortKey);
-                  setSortDirection("asc");
-                }}
-                value={sortKey ?? "releaseDate"}
-              >
-                {sortOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button className="filter-button" type="button">
-              <FilterIcon />
-              <span>Filter</span>
+            <button className="utility-button" onClick={exportTracking} type="button">
+              Export
             </button>
-
             <button
-              aria-label="More options"
-              className="more-button"
+              className="utility-button"
+              onClick={() => importInputRef.current?.click()}
               type="button"
             >
-              <MoreIcon />
+              Import
             </button>
+            <input
+              accept="application/json"
+              aria-label="Import tracking JSON"
+              className="hidden-file-input"
+              onChange={(event) => importTracking(event.target.files?.[0])}
+              ref={importInputRef}
+              type="file"
+            />
           </div>
-
-          {viewMode === "table" && hasCustomColumnWidths ? (
-            <button
-              className="reset-columns"
-              onClick={resetColumnWidths}
-              type="button"
-            >
-              Reset columns
-            </button>
-          ) : null}
-
-          <button className="utility-button" onClick={exportTracking} type="button">
-            Export
-          </button>
-          <button
-            className="utility-button"
-            onClick={() => importInputRef.current?.click()}
-            type="button"
-          >
-            Import
-          </button>
-          <input
-            accept="application/json"
-            aria-label="Import tracking JSON"
-            className="hidden-file-input"
-            onChange={(event) => importTracking(event.target.files?.[0])}
-            ref={importInputRef}
-            type="file"
-          />
 
           <input
             aria-label="Search titles"
@@ -1158,6 +1434,105 @@ export default function Home() {
           tracking={getTrackingForTitle(tracking, selectedEntry.id)}
         />
       ) : null}
+
+      {isSignInOpen ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => setIsSignInOpen(false)}
+          role="presentation"
+        >
+          <section
+            aria-label="Sign in to cloud sync"
+            className="sign-in-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              aria-label="Close sign in"
+              className="modal-close"
+              onClick={() => setIsSignInOpen(false)}
+              type="button"
+            >
+              x
+            </button>
+            <h2>Sign in to sync</h2>
+            <p>Use email and password to save watch status, years, and notes online.</p>
+            <input
+              aria-label="Email for cloud sync"
+              autoComplete="email"
+              className="cloud-email"
+              disabled={!isCloudConfigured() || isCloudBusy}
+              id="cloud-sync-email"
+              name="email"
+              onChange={(event) => setAuthEmail(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  signInWithPassword();
+                }
+              }}
+              placeholder="Email"
+              type="email"
+              value={authEmail}
+            />
+            <div className="password-field">
+              <input
+                aria-label="Password for cloud sync"
+                autoComplete="current-password"
+                className="cloud-email password-input"
+                disabled={!isCloudConfigured() || isCloudBusy}
+                id="cloud-sync-password"
+                name="password"
+                onChange={(event) => setAuthPassword(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    signInWithPassword();
+                  }
+                }}
+                placeholder="Password"
+                type={showAuthPassword ? "text" : "password"}
+                value={authPassword}
+              />
+              <button
+                aria-label={showAuthPassword ? "Hide password" : "Show password"}
+                className="password-toggle"
+                onClick={() => setShowAuthPassword((visible) => !visible)}
+                type="button"
+              >
+                <EyeIcon hidden={showAuthPassword} />
+              </button>
+            </div>
+            <button
+              className="utility-button sign-in-submit"
+              disabled={
+                !isCloudConfigured() ||
+                isCloudBusy ||
+                !authEmail.trim() ||
+                !authPassword
+              }
+              onClick={signInWithPassword}
+              type="button"
+            >
+              Sign in
+            </button>
+            <button
+              className="secondary-auth-button"
+              disabled={
+                !isCloudConfigured() ||
+                isCloudBusy ||
+                !authEmail.trim() ||
+                !authPassword
+              }
+              onClick={createAccountWithPassword}
+              type="button"
+            >
+              Create account
+            </button>
+            <p className="modal-status">{cloudMessage}</p>
+          </section>
+        </div>
+      ) : null}
+
       <div className="version-badge" aria-label={`G-LIST version ${appVersion}`}>
         G-LIST {appVersion}
       </div>

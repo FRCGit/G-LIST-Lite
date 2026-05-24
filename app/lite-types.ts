@@ -5,6 +5,7 @@ export type LiteTrackingEntry = {
   status: WatchStatus;
   watchedYear?: string;
   notes?: string;
+  updatedAt?: string;
 };
 
 export type LiteMediaEntry = {
