@@ -327,7 +327,11 @@ git status --short --branch
 - The deployed Hostinger/GitHub flow uses `main`; pushing to GitHub updates the live Hostinger deployment.
 - Current live target is `glist.francocongiusto.com`.
 - A small fixed version badge appears in the bottom-right corner so it is easy to confirm the live site has redeployed after a push.
-- Hostinger Node deployments should start with `npm start`; the package start script runs `next start -H 0.0.0.0` so the app binds to the public interface instead of only localhost.
+- The app is currently static-exportable because it uses client state/localStorage and no server routes. `next.config.mjs` uses `output: "export"`, so Hostinger should publish the generated `out/` directory. This avoids missing CSS/assets from a misconfigured Node runtime.
+- If Hostinger asks for build/output settings, use:
+  - Install: `npm install`
+  - Build: `npm run build`
+  - Output directory: `out`
 - Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
 
