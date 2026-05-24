@@ -327,11 +327,24 @@ git status --short --branch
 - The deployed Hostinger/GitHub flow uses `main`; pushing to GitHub updates the live Hostinger deployment.
 - Current live target is `glist.francocongiusto.com`.
 - A small fixed version badge appears in the bottom-right corner so it is easy to confirm the live site has redeployed after a push.
-- The app is currently static-exportable because it uses client state/localStorage and no server routes. `next.config.mjs` uses `output: "export"`, so Hostinger should publish the generated `out/` directory. This avoids missing CSS/assets from a misconfigured Node runtime.
-- If Hostinger asks for build/output settings, use:
-  - Install: `npm install`
-  - Build: `npm run build`
-  - Output directory: `out`
+- Hostinger deployment is currently unresolved:
+  - Initial Hostinger deploy appeared to work.
+  - Later deploys built successfully but the live site showed unstyled/naked HTML, meaning the page rendered but the CSS/static assets from `/_next/static/...` were not being served.
+  - Local checks confirmed the version badge and CSS are present in local output.
+  - `npm run lint` and `npm run build` pass locally.
+  - Build logs on Hostinger showed success through `next build`; the shown logs were build logs only, not runtime/start logs.
+  - A normal Node deployment was attempted with `package.json` start script changed to `next start -H 0.0.0.0`; that did not fix the live styling/runtime problem.
+  - A static export was attempted by adding `output: "export"` to `next.config.mjs`; local `npm run build` produced `out/index.html` and `out/_next/static/...css`, but Hostinger still did not serve the site correctly as of the end of the session.
+  - Added `public/.htaccess` so the static export copies Apache rewrite/MIME rules into `out/.htaccess`. This is meant to prevent Hostinger from rewriting `/_next/static/...` CSS/JS requests to `index.html`, which can make the live page appear as unstyled/naked HTML.
+  - Next debugging step: inspect Hostinger's actual deploy settings and runtime/static publish settings. Confirm whether it is deploying as Node/Next or static, and whether the output/public directory is set to `.next`/default or `out`.
+  - If keeping static export, Hostinger should use:
+    - Install: `npm install`
+    - Build: `npm run build`
+    - Output directory: `out`
+    - No Node start command should be needed for the static site.
+    - Confirm the deployed files include `index.html`, `.htaccess`, and `_next/static/...` from the generated `out/` directory.
+  - If reverting to normal Next/Node, remove `output: "export"` from `next.config.mjs`, keep/check `npm start`, and find Hostinger's runtime/start logs rather than only build logs.
+  - Do not assume a successful build means the live app is healthy; verify the live site loads CSS and shows the bottom-right version badge.
 - Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
 
