@@ -138,7 +138,7 @@ Earlier issue:
 Deploy badge:
 
 - `appVersion` is in `app/page.tsx`.
-- Current known value: `v2026.05.24.3`.
+- Current known value: `v2026.05.24.9`.
 - Bump before pushing visible deploy changes so the live site can be verified.
 
 Hostinger env vars needed:
@@ -253,6 +253,7 @@ If the server needs restart after env changes:
 - Local `npm run build` passed after stopping the dev server and clearing generated `.next`/`out` folders.
 - Fresh static export includes `out/.htaccess` and `out/_next/static/...`.
 - Live site showing plain HTML means CSS/JS under `/_next/static/...` is not being served/deployed correctly. Verify Hostinger output directory is `out`, confirm the latest commit including `public/.htaccess` is deployed, and check whether `https://glist.francocongiusto.com/_next/static/...css` returns CSS instead of HTML/404.
+- After pushing `v2026.05.24.8`, live HTML showed the new version but assets were inconsistent: CSS sometimes returned `200 text/css`, while several chunk URLs returned `403` or stale/mismatched names. Added explicit `public/.htaccess` allow rules for asset extensions and `RewriteRule ^_next/static/ - [L]`, then bumped to `v2026.05.24.9` for a fresh deploy.
 
 Current uncommitted files after UI tuning:
 

@@ -1,7 +1,15 @@
 Options -MultiViews
 
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(css|js|mjs|json|txt|map|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)$">
+    Require all granted
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
+
+  RewriteRule ^_next/static/ - [L]
 
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
