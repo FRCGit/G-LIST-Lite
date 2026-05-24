@@ -286,10 +286,12 @@ Keep Lite components small and boring. Prefer inline row editing over modals for
 - Tap a card/title to open a preview sheet because hover does not exist reliably on touch.
 - Preview sheet has an `Open Wikipedia` link.
 - Tracking controls remain directly usable on the card or sheet.
-- Current responsive behavior:
-  - Header width is allowed to become fluid on phone instead of using desktop table width.
-  - Table remains horizontally scrollable.
-  - Poster Wall uses mobile-only size buckets on phone: two-up small cards, centered medium cards, or full-width large cards.
+  - Current responsive behavior:
+    - Header width is allowed to become fluid on phone instead of using desktop table width.
+    - Table remains horizontally scrollable.
+    - Mobile/tablet table horizontal drag uses custom kinetic scrolling on the table body so a swipe can keep coasting after release, similar to desktop Chrome. Native form controls, links, and resize handles should not start table drag.
+    - Touch devices, including iPad Safari, use the draggable table overflow behavior even when the viewport is wider than the phone breakpoint.
+    - Poster Wall uses mobile-only size buckets on phone: two-up small cards, centered medium cards, or full-width large cards.
   - Hover preview card is hidden on phone because hover is not reliable.
   - Tap/click can open a preview sheet with summary, metadata, status, and an `Open Wikipedia` link.
 
@@ -322,6 +324,8 @@ git status --short --branch
 - Compact/mobile column widths are stored separately under `g-list-lite-compact-column-widths-v1`.
 - Poster Wall size is stored in `localStorage` under `g-list-lite-poster-size-v1`; the old density key is migration-only.
 - Local state saves are gated until after localStorage has been loaded, so the first render does not wipe saved tracking or column widths.
+- The deployed Hostinger/GitHub flow uses `main`; pushing to GitHub updates the live Hostinger deployment.
+- Current live target is `glist.francocongiusto.com`.
 - Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
 
@@ -418,8 +422,8 @@ Recommended next steps:
    - Poster Wall now uses a `Poster size` slider instead of `Small` / `Medium` / `Large`.
    - The slider is saved under `g-list-lite-poster-size-v1`.
    - Old saved density values migrate forward: old `Compact` / `Small` maps to a smaller slider value, old `Large` maps to a larger value.
-   - On phone, the smallest slider range hides the poster placeholder frame and reads like a dense list row.
-   - Target smallest mobile row shape:
+   - On phone, keep the poster placeholder frame even at the small size; do not return to the no-poster dense row unless explicitly requested.
+   - Deprecated no-poster mobile row shape:
 
 ```text
 Mobile Suit Gundam
@@ -427,7 +431,7 @@ TV series: 43 episodes · 1979-1980
 [Watched] [2019]
 ```
 
-   - Normal and larger slider values keep the placeholder frame on phone.
+   - Current mobile poster sizes all keep the placeholder frame on phone.
 2. Consider poster wall refinements:
    - Hide poster controls until hover on desktop, but keep them always visible on touch.
    - Add a small watched-year badge on watched poster cards.

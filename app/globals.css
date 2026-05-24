@@ -439,15 +439,28 @@ a:hover {
 .table-wrap {
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  cursor: grab;
   margin: 0;
   overflow-x: hidden;
   overflow-y: hidden;
   transition: width 120ms ease;
 }
 
+.table-wrap:active {
+  cursor: grabbing;
+}
+
 .top-scrollbar,
 .table-wrap {
   width: 100%;
+}
+
+@media (pointer: coarse) {
+  .table-wrap {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    touch-action: pan-y;
+  }
 }
 
 table {
@@ -1013,7 +1026,7 @@ dd {
   .table-wrap {
     -webkit-overflow-scrolling: touch;
     overflow-x: auto;
-    touch-action: pan-x pan-y;
+    touch-action: pan-y;
   }
 
   .poster-grid {
