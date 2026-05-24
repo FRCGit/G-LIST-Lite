@@ -47,6 +47,7 @@ type TableColumn = {
 
 type ColumnWidths = Partial<Record<SortKey, number>>;
 type CloudAuthState = "checking" | "signedOut" | "signedIn";
+type AuthModalMode = "signIn" | "recover" | "updatePassword";
 
 const entries = mediaEntries as LiteMediaEntry[];
 const sortOptions: { key: SortKey; label: string }[] = [
@@ -63,7 +64,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.24.2";
+const appVersion = "v2026.05.24.3";
 
 type TableDragState = {
   pointerId: number;
@@ -264,6 +265,7 @@ export default function Home() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [showAuthPassword, setShowAuthPassword] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>("signIn");
   const [cloudMessage, setCloudMessage] = useState(
     isCloudConfigured() ? "Cloud sync signed out" : "Cloud sync not configured"
   );
@@ -331,6 +333,13 @@ export default function Home() {
 
       setCloudUser(sessionUser);
       setCloudAuthState(sessionUser ? "signedIn" : "signedOut");
+
+      if (_event === "PASSWORD_RECOVERY") {
+        setAuthPassword("");
+        setAuthModalMode("updatePassword");
+        setIsSignInOpen(true);
+        setCloudMessage("Enter a new password");
+      }
     });
 
     return () => {
@@ -540,6 +549,109 @@ export default function Home() {
     }
 
     setCloudMessage("Account created. Check email if confirmation is required");
+  }
+
+  async function sendPasswordReset() {
+    const supabase = getSupabaseClient();
+    const email = authEmail.trim();
+
+    if (!supabase || !email) {
+      return;
+    }
+
+    setIsCloudBusy(true);
+    setCloudMessage("Sending reset email");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
+
+    setIsCloudBusy(false);
+
+    if (error) {
+      setCloudMessage(error.message || "Password reset failed");
+      return;
+    }
+
+    setCloudMessage("Check your email for a password reset link");
+  }
+
+  async function updatePassword() {
+    const supabase = getSupabaseClient();
+    const password = authPassword;
+
+    if (!supabase || !password) {
+      return;
+    }
+
+    if (password.length < 6) {
+      setCloudMessage("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsCloudBusy(true);
+    setCloudMessage("Updating password");
+
+    const hasRecoverySession = await ensureRecoverySession();
+
+    if (!hasRecoverySession) {
+      setIsCloudBusy(false);
+      setCloudMessage("Reset link expired. Send a new password reset email");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password
+    });
+
+    setIsCloudBusy(false);
+
+    if (error) {
+      setCloudMessage(error.message || "Password update failed");
+      return;
+    }
+
+    setAuthModalMode("signIn");
+    setIsSignInOpen(false);
+    setCloudMessage("Password updated");
+  }
+
+  async function ensureRecoverySession() {
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      return false;
+    }
+
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+
+    if (session) {
+      return true;
+    }
+
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+
+    if (accessToken && refreshToken) {
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+
+      return !error;
+    }
+
+    const code = new URLSearchParams(window.location.search).get("code");
+
+    if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      return !error;
+    }
+
+    return false;
   }
 
   async function signOut() {
@@ -1454,80 +1566,159 @@ export default function Home() {
             >
               x
             </button>
-            <h2>Sign in to sync</h2>
-            <p>Use email and password to save watch status, years, and notes online.</p>
-            <input
-              aria-label="Email for cloud sync"
-              autoComplete="email"
-              className="cloud-email"
-              disabled={!isCloudConfigured() || isCloudBusy}
-              id="cloud-sync-email"
-              name="email"
-              onChange={(event) => setAuthEmail(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  signInWithPassword();
-                }
-              }}
-              placeholder="Email"
-              type="email"
-              value={authEmail}
-            />
-            <div className="password-field">
+            <h2>
+              {authModalMode === "recover"
+                ? "Reset password"
+                : authModalMode === "updatePassword"
+                  ? "Set new password"
+                  : "Sign in to sync"}
+            </h2>
+            <p>
+              {authModalMode === "recover"
+                ? "Enter your email and we will send a password reset link."
+                : authModalMode === "updatePassword"
+                  ? "Enter a new password for your account."
+                  : "Use email and password to save watch status, years, and notes online."}
+            </p>
+            {authModalMode !== "updatePassword" ? (
               <input
-                aria-label="Password for cloud sync"
-                autoComplete="current-password"
-                className="cloud-email password-input"
+                aria-label="Email for cloud sync"
+                autoComplete="email"
+                className="cloud-email"
                 disabled={!isCloudConfigured() || isCloudBusy}
-                id="cloud-sync-password"
-                name="password"
-                onChange={(event) => setAuthPassword(event.target.value)}
+                id="cloud-sync-email"
+                name="email"
+                onChange={(event) => setAuthEmail(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
+                    if (authModalMode === "recover") {
+                      sendPasswordReset();
+                      return;
+                    }
+
                     signInWithPassword();
                   }
                 }}
-                placeholder="Password"
-                type={showAuthPassword ? "text" : "password"}
-                value={authPassword}
+                placeholder="Email"
+                type="email"
+                value={authEmail}
               />
+            ) : null}
+            {authModalMode !== "recover" ? (
+              <div className="password-field">
+                <input
+                  aria-label="Password for cloud sync"
+                  autoComplete={
+                    authModalMode === "updatePassword"
+                      ? "new-password"
+                      : "current-password"
+                  }
+                  className="cloud-email password-input"
+                  disabled={!isCloudConfigured() || isCloudBusy}
+                  id="cloud-sync-password"
+                  name="password"
+                  onChange={(event) => setAuthPassword(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      if (authModalMode === "updatePassword") {
+                        updatePassword();
+                        return;
+                      }
+
+                      signInWithPassword();
+                    }
+                  }}
+                  placeholder={
+                    authModalMode === "updatePassword"
+                      ? "New password"
+                      : "Password"
+                  }
+                  type={showAuthPassword ? "text" : "password"}
+                  value={authPassword}
+                />
+                <button
+                  aria-label={showAuthPassword ? "Hide password" : "Show password"}
+                  className="password-toggle"
+                  onClick={() => setShowAuthPassword((visible) => !visible)}
+                  type="button"
+                >
+                  <EyeIcon hidden={showAuthPassword} />
+                </button>
+              </div>
+            ) : null}
+            {authModalMode === "recover" ? (
               <button
-                aria-label={showAuthPassword ? "Hide password" : "Show password"}
-                className="password-toggle"
-                onClick={() => setShowAuthPassword((visible) => !visible)}
+                className="utility-button sign-in-submit"
+                disabled={!isCloudConfigured() || isCloudBusy || !authEmail.trim()}
+                onClick={sendPasswordReset}
                 type="button"
               >
-                <EyeIcon hidden={showAuthPassword} />
+                Send reset link
               </button>
-            </div>
-            <button
-              className="utility-button sign-in-submit"
-              disabled={
-                !isCloudConfigured() ||
-                isCloudBusy ||
-                !authEmail.trim() ||
-                !authPassword
-              }
-              onClick={signInWithPassword}
-              type="button"
-            >
-              Sign in
-            </button>
-            <button
-              className="secondary-auth-button"
-              disabled={
-                !isCloudConfigured() ||
-                isCloudBusy ||
-                !authEmail.trim() ||
-                !authPassword
-              }
-              onClick={createAccountWithPassword}
-              type="button"
-            >
-              Create account
-            </button>
+            ) : authModalMode === "updatePassword" ? (
+              <button
+                className="utility-button sign-in-submit"
+                disabled={!isCloudConfigured() || isCloudBusy || !authPassword}
+                onClick={updatePassword}
+                type="button"
+              >
+                Update password
+              </button>
+            ) : (
+              <>
+                <button
+                  className="utility-button sign-in-submit"
+                  disabled={
+                    !isCloudConfigured() ||
+                    isCloudBusy ||
+                    !authEmail.trim() ||
+                    !authPassword
+                  }
+                  onClick={signInWithPassword}
+                  type="button"
+                >
+                  Sign in
+                </button>
+                <button
+                  className="secondary-auth-button"
+                  disabled={
+                    !isCloudConfigured() ||
+                    isCloudBusy ||
+                    !authEmail.trim() ||
+                    !authPassword
+                  }
+                  onClick={createAccountWithPassword}
+                  type="button"
+                >
+                  Create account
+                </button>
+              </>
+            )}
+            {authModalMode === "signIn" ? (
+              <button
+                className="text-auth-button"
+                onClick={() => {
+                  setAuthModalMode("recover");
+                  setCloudMessage("Enter your account email");
+                }}
+                type="button"
+              >
+                Forgot password?
+              </button>
+            ) : authModalMode === "recover" ? (
+              <button
+                className="text-auth-button"
+                onClick={() => {
+                  setAuthModalMode("signIn");
+                  setCloudMessage("Cloud sync signed out");
+                }}
+                type="button"
+              >
+                Back to sign in
+              </button>
+            ) : null}
             <p className="modal-status">{cloudMessage}</p>
           </section>
         </div>

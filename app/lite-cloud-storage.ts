@@ -29,7 +29,13 @@ export function getSupabaseClient(): SupabaseClient | null {
   }
 
   if (!supabaseClient) {
-    supabaseClient = createClient(supabaseUrl as string, supabaseKey as string);
+    supabaseClient = createClient(supabaseUrl as string, supabaseKey as string, {
+      auth: {
+        detectSessionInUrl: true,
+        flowType: "implicit",
+        persistSession: true
+      }
+    });
   }
 
   return supabaseClient;

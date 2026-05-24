@@ -97,7 +97,7 @@ Do not commit `.env.local`.
 
 1. Create a Supabase project.
 2. Run `supabase/schema.sql` in the Supabase SQL editor.
-3. Add these Auth redirect URLs in Supabase:
+3. Add these Auth redirect URLs in Supabase for sign-in and password recovery:
 
 ```text
 http://127.0.0.1:3001

@@ -468,6 +468,15 @@ a:hover {
   opacity: 0.6;
 }
 
+.text-auth-button {
+  background: transparent;
+  border: 0;
+  color: var(--link);
+  cursor: pointer;
+  justify-self: start;
+  padding: 0;
+}
+
 .modal-status {
   min-height: 18px;
 }

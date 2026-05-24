@@ -101,6 +101,7 @@ Auth notes:
 
 - User clarified they wanted email/password auth, not magic-link-only auth.
 - Modal now uses Supabase `signInWithPassword` and `signUp`.
+- Forgot-password flow now uses `resetPasswordForEmail`; recovery link returns to the app and opens a new-password modal through the `PASSWORD_RECOVERY` auth event.
 - Supabase email confirmation may still be required depending on project Auth settings.
 - Supabase Auth redirect URLs should include:
 
