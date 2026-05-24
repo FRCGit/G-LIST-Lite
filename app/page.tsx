@@ -64,7 +64,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.24.11";
+const appVersion = "v2026.05.24.12";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
 

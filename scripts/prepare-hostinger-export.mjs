@@ -1,9 +1,19 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync
+} from "node:fs";
+import { dirname, join } from "node:path";
 
 const outDir = "out";
 const exportStaticDir = join(outDir, "_next", "static");
 const buildStaticDir = join(".next", "static");
+const serverAppDir = join(".next", "server", "app");
 const hostingerStaticDir = join(outDir, "next-static");
 const textExtensions = new Set([".html", ".js", ".json", ".txt"]);
 
@@ -26,6 +36,77 @@ function extensionFor(path) {
   const dotIndex = path.lastIndexOf(".");
   return dotIndex === -1 ? "" : path.slice(dotIndex);
 }
+
+function copyIfExists(source, destination) {
+  if (!existsSync(source)) {
+    return false;
+  }
+
+  mkdirSync(dirname(destination), { recursive: true });
+  copyFileSync(source, destination);
+  return true;
+}
+
+function segmentDestinationName(name) {
+  return `__next.${name.replace(".segment.rsc", "")}.txt`;
+}
+
+function copySegments(sourceDir, destinationDir) {
+  if (!existsSync(sourceDir)) {
+    return 0;
+  }
+
+  mkdirSync(destinationDir, { recursive: true });
+  let copied = 0;
+
+  for (const name of readdirSync(sourceDir)) {
+    const source = join(sourceDir, name);
+    const stats = statSync(source);
+
+    if (stats.isDirectory()) {
+      mkdirSync(join(destinationDir, `__next.${name}`), { recursive: true });
+      continue;
+    }
+
+    if (name.endsWith(".segment.rsc")) {
+      copyFileSync(source, join(destinationDir, segmentDestinationName(name)));
+      copied += 1;
+    }
+  }
+
+  return copied;
+}
+
+function createExportFromBuildOutput() {
+  if (existsSync(outDir)) {
+    return false;
+  }
+
+  const indexHtml = join(serverAppDir, "index.html");
+
+  if (!existsSync(indexHtml)) {
+    throw new Error(`Missing export directory ${outDir} and fallback HTML ${indexHtml}.`);
+  }
+
+  mkdirSync(outDir, { recursive: true });
+
+  if (existsSync("public")) {
+    cpSync("public", outDir, { recursive: true });
+  }
+
+  copyFileSync(indexHtml, join(outDir, "index.html"));
+  copyIfExists(join(serverAppDir, "index.rsc"), join(outDir, "index.txt"));
+  copySegments(join(serverAppDir, "index.segments"), outDir);
+
+  copyIfExists(join(serverAppDir, "_not-found.html"), join(outDir, "404.html"));
+  copyIfExists(join(serverAppDir, "_not-found.html"), join(outDir, "_not-found.html"));
+  copyIfExists(join(serverAppDir, "_not-found.rsc"), join(outDir, "_not-found.txt"));
+  copySegments(join(serverAppDir, "_not-found.segments"), join(outDir, "_not-found"));
+
+  return true;
+}
+
+const createdExport = createExportFromBuildOutput();
 
 if (!existsSync(outDir)) {
   throw new Error(`Missing static export directory: ${outDir}`);
@@ -63,5 +144,5 @@ for (const file of walk(outDir)) {
 }
 
 console.log(
-  `Prepared Hostinger export: copied ${sourceStaticDir} to ${hostingerStaticDir} and rewrote ${rewrittenFiles} files.`
+  `Prepared Hostinger export: ${createdExport ? "created out from .next/server/app, " : ""}copied ${sourceStaticDir} to ${hostingerStaticDir} and rewrote ${rewrittenFiles} files.`
 );
