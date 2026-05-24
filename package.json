@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/prepare-hostinger-export.mjs",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint .",
     "sync:wikipedia": "tsx scripts/sync-gundam-wikipedia-lite.ts",

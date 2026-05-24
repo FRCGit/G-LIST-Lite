@@ -10,6 +10,7 @@ Options -MultiViews
   RewriteEngine On
 
   RewriteRule ^_next/static/ - [L]
+  RewriteRule ^next-static/ - [L]
 
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
