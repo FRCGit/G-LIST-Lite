@@ -2,7 +2,8 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, wri
 import { join } from "node:path";
 
 const outDir = "out";
-const nextStaticDir = join(outDir, "_next", "static");
+const exportStaticDir = join(outDir, "_next", "static");
+const buildStaticDir = join(".next", "static");
 const hostingerStaticDir = join(outDir, "next-static");
 const textExtensions = new Set([".html", ".js", ".json", ".txt"]);
 
@@ -26,12 +27,24 @@ function extensionFor(path) {
   return dotIndex === -1 ? "" : path.slice(dotIndex);
 }
 
-if (!existsSync(nextStaticDir)) {
-  throw new Error(`Missing static export directory: ${nextStaticDir}`);
+if (!existsSync(outDir)) {
+  throw new Error(`Missing static export directory: ${outDir}`);
+}
+
+const sourceStaticDir = existsSync(exportStaticDir)
+  ? exportStaticDir
+  : existsSync(buildStaticDir)
+    ? buildStaticDir
+    : null;
+
+if (!sourceStaticDir) {
+  throw new Error(
+    `Missing static asset directory. Checked ${exportStaticDir} and ${buildStaticDir}.`
+  );
 }
 
 mkdirSync(hostingerStaticDir, { recursive: true });
-cpSync(nextStaticDir, hostingerStaticDir, { recursive: true });
+cpSync(sourceStaticDir, hostingerStaticDir, { recursive: true });
 
 let rewrittenFiles = 0;
 
@@ -50,5 +63,5 @@ for (const file of walk(outDir)) {
 }
 
 console.log(
-  `Prepared Hostinger export: copied ${nextStaticDir} to ${hostingerStaticDir} and rewrote ${rewrittenFiles} files.`
+  `Prepared Hostinger export: copied ${sourceStaticDir} to ${hostingerStaticDir} and rewrote ${rewrittenFiles} files.`
 );

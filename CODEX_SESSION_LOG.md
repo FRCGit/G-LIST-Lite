@@ -138,7 +138,7 @@ Earlier issue:
 Deploy badge:
 
 - `appVersion` is in `app/page.tsx`.
-- Current known value: `v2026.05.24.10`.
+- Current known value: `v2026.05.24.11`.
 - Bump before pushing visible deploy changes so the live site can be verified.
 
 Hostinger env vars needed:
@@ -255,6 +255,7 @@ If the server needs restart after env changes:
 - Live site showing plain HTML means CSS/JS under `/_next/static/...` is not being served/deployed correctly. Verify Hostinger output directory is `out`, confirm the latest commit including `public/.htaccess` is deployed, and check whether `https://glist.francocongiusto.com/_next/static/...css` returns CSS instead of HTML/404.
 - After pushing `v2026.05.24.8`, live HTML showed the new version but assets were inconsistent: CSS sometimes returned `200 text/css`, while several chunk URLs returned `403` or stale/mismatched names. Added explicit `public/.htaccess` allow rules for asset extensions and `RewriteRule ^_next/static/ - [L]`, then bumped to `v2026.05.24.9` for a fresh deploy.
 - `/_next/static/...` continued returning `403` on Hostinger, so a stronger workaround was added: `package.json` now runs `postbuild`, which calls `scripts/prepare-hostinger-export.mjs`. The script copies `out/_next/static` to `out/next-static` and rewrites exported `.html`, `.js`, `.json`, and `.txt` references from `/_next/static/` to `/next-static/`. This avoids Hostinger's blocked `_next` path while keeping the standard Next export available.
+- Hostinger build for `v2026.05.24.10` failed because `scripts/prepare-hostinger-export.mjs` expected `out/_next/static`, but Hostinger's postbuild environment did not have that directory. Script was updated to fall back to `.next/static` and version bumped to `v2026.05.24.11`.
 
 Current uncommitted files after UI tuning:
 
