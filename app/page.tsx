@@ -54,6 +54,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
+const appVersion = "v2026.05.23.2";
 
 type TableDragState = {
   pointerId: number;
@@ -1157,6 +1158,9 @@ export default function Home() {
           tracking={getTrackingForTitle(tracking, selectedEntry.id)}
         />
       ) : null}
+      <div className="version-badge" aria-label={`G-LIST version ${appVersion}`}>
+        G-LIST {appVersion}
+      </div>
     </main>
   );
 }

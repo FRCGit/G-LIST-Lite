@@ -892,6 +892,21 @@ tbody tr:hover td {
   margin: 0 0 7px;
 }
 
+.version-badge {
+  background: rgb(9 13 17 / 0.86);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  bottom: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  padding: 7px 9px;
+  pointer-events: none;
+  position: fixed;
+  right: 12px;
+  z-index: 30;
+}
+
 .extract {
   color: #d8dde5;
   display: -webkit-box;

@@ -326,6 +326,7 @@ git status --short --branch
 - Local state saves are gated until after localStorage has been loaded, so the first render does not wipe saved tracking or column widths.
 - The deployed Hostinger/GitHub flow uses `main`; pushing to GitHub updates the live Hostinger deployment.
 - Current live target is `glist.francocongiusto.com`.
+- A small fixed version badge appears in the bottom-right corner so it is easy to confirm the live site has redeployed after a push.
 - Tracking can be exported/imported as JSON from the top controls.
 - Known checks:
 
