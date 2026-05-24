@@ -14,7 +14,9 @@ const outDir = "out";
 const exportStaticDir = join(outDir, "_next", "static");
 const buildStaticDir = join(".next", "static");
 const serverAppDir = join(".next", "server", "app");
-const hostingerStaticDir = join(outDir, "next-static");
+const prefixedStaticPath = join("next-static", "_next", "static");
+const hostingerStaticDir = join(outDir, prefixedStaticPath);
+const publicStaticDir = join("public", prefixedStaticPath);
 const textExtensions = new Set([".html", ".js", ".json", ".txt"]);
 
 function walk(dir, files = []) {
@@ -127,6 +129,9 @@ if (!sourceStaticDir) {
 mkdirSync(hostingerStaticDir, { recursive: true });
 cpSync(sourceStaticDir, hostingerStaticDir, { recursive: true });
 
+mkdirSync(publicStaticDir, { recursive: true });
+cpSync(sourceStaticDir, publicStaticDir, { recursive: true });
+
 let rewrittenFiles = 0;
 
 for (const file of walk(outDir)) {
@@ -135,7 +140,10 @@ for (const file of walk(outDir)) {
   }
 
   const original = readFileSync(file, "utf8");
-  const rewritten = original.replaceAll("/_next/static/", "/next-static/");
+  const rewritten = original.replaceAll(
+    /(?<!next-static)\/_next\/static\//g,
+    "/next-static/_next/static/"
+  );
 
   if (rewritten !== original) {
     writeFileSync(file, rewritten);
@@ -144,5 +152,5 @@ for (const file of walk(outDir)) {
 }
 
 console.log(
-  `Prepared Hostinger export: ${createdExport ? "created out from .next/server/app, " : ""}copied ${sourceStaticDir} to ${hostingerStaticDir} and rewrote ${rewrittenFiles} files.`
+  `Prepared Hostinger export: ${createdExport ? "created out from .next/server/app, " : ""}copied ${sourceStaticDir} to ${hostingerStaticDir} and ${publicStaticDir}, then rewrote ${rewrittenFiles} files.`
 );

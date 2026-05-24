@@ -138,7 +138,7 @@ Earlier issue:
 Deploy badge:
 
 - `appVersion` is in `app/page.tsx`.
-- Current known value: `v2026.05.24.12`.
+- Current known value: `v2026.05.24.13`.
 - Bump before pushing visible deploy changes so the live site can be verified.
 
 Hostinger env vars needed:
@@ -257,6 +257,8 @@ If the server needs restart after env changes:
 - `/_next/static/...` continued returning `403` on Hostinger, so a stronger workaround was added: `package.json` now runs `postbuild`, which calls `scripts/prepare-hostinger-export.mjs`. The script copies `out/_next/static` to `out/next-static` and rewrites exported `.html`, `.js`, `.json`, and `.txt` references from `/_next/static/` to `/next-static/`. This avoids Hostinger's blocked `_next` path while keeping the standard Next export available.
 - Hostinger build for `v2026.05.24.10` failed because `scripts/prepare-hostinger-export.mjs` expected `out/_next/static`, but Hostinger's postbuild environment did not have that directory. Script was updated to fall back to `.next/static` and version bumped to `v2026.05.24.11`.
 - Hostinger build for `v2026.05.24.11` failed because `out` itself was missing when `postbuild` ran. Script was updated again to create `out` from `.next/server/app` fallback files (`index.html`, RSC text files, route segments, and `_not-found` output) before copying static assets/replacing paths. Version bumped to `v2026.05.24.12`.
+- `v2026.05.24.12` deployed but live cache-busted HTML still came from Next server output and referenced `/_next/static`. Added production `assetPrefix: "/next-static"` in `next.config.mjs` and updated `prepare-hostinger-export.mjs` to copy chunks to both `out/next-static/_next/static` and `public/next-static/_next/static`. `public/next-static` is ignored because it is generated during build. Version bumped to `v2026.05.24.13`.
+- `eslint.config.mjs` also ignores `public/next-static/**` so local lint does not scan generated minified Next chunks after a build.
 
 Current uncommitted files after UI tuning:
 
