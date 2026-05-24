@@ -64,7 +64,9 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.24.3";
+const appVersion = "v2026.05.24.8";
+const previewCardWidth = 640;
+const previewCardHeight = 520;
 
 type TableDragState = {
   pointerId: number;
@@ -1533,9 +1535,15 @@ export default function Home() {
       {preview ? (
         <PreviewCard
           entry={preview.entry}
-          left={Math.min(preview.x + 18, window.innerWidth - 340)}
+          left={Math.max(
+            18,
+            Math.min(preview.x + 18, window.innerWidth - previewCardWidth - 18)
+          )}
           tracking={getTrackingForTitle(tracking, preview.entry.id)}
-          top={Math.min(preview.y + 18, window.innerHeight - 360)}
+          top={Math.max(
+            18,
+            Math.min(preview.y + 18, window.innerHeight - previewCardHeight - 18)
+          )}
         />
       ) : null}
 

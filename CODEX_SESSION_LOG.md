@@ -138,8 +138,15 @@ Earlier issue:
 Deploy badge:
 
 - `appVersion` is in `app/page.tsx`.
-- Current known value: `v2026.05.24.1`.
+- Current known value: `v2026.05.24.3`.
 - Bump before pushing visible deploy changes so the live site can be verified.
+
+Hostinger env vars needed:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL=https://pgkvxxmmadcyzjwxnags.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_iiGH-RC8VHkB4YK4CN90GA_rBmMx-Zw
+```
 
 ## Data Sync Context
 
@@ -184,21 +191,38 @@ Spot-check these after parser/table changes:
 - `Mobile Suit Gundam: The Witch from Mercury`
 - `Mobile Suit Gundam SEED Freedom Zero`
 
-## Current Uncommitted Work
+## Current Git State
 
-As of this handoff, there is local uncommitted work for Supabase/cloud sync and UI changes:
+Latest pushed commits:
 
-- `@supabase/supabase-js` added.
-- `app/lite-cloud-storage.ts` added.
-- `supabase/schema.sql` added.
-- `app/page.tsx` changed for cloud sync, modal sign-in, account menu, and `updatedAt`.
-- `app/globals.css` changed for auth modal/account menu.
-- `app/lite-types.ts` changed to add optional `updatedAt`.
-- `package.json` and `package-lock.json` changed.
-- `README.md` rewritten.
-- `CODEX_SESSION_LOG.md` added.
+```text
+c3f084e Add password recovery flow
+46586ba Add Supabase cloud sync
+```
 
-Run before pushing:
+`main` was pushed to `origin/main` after lint/build passed. The working tree was clean before this handoff-log update.
+
+Implemented cloud-sync/auth work:
+
+- Added `@supabase/supabase-js`.
+- Added `app/lite-cloud-storage.ts`.
+- Added `supabase/schema.sql`.
+- Added Supabase email/password auth with sign-in modal, account chip, and account dropdown.
+- Added forgot-password/reset-password flow with password visibility toggle.
+- Added local/cloud merge behavior using `updatedAt`.
+- Kept localStorage as cache/fallback, but Supabase is now the source for signed-in saved data.
+- Rewrote `README.md` as a normal public project README.
+- Added `exports/g-list-lite-onenote.csv` and `exports/g-list-lite-onenote.tsv`.
+
+Password recovery caveat:
+
+- Supabase built-in email sending is currently rate-limited. User saw `email rate limit exceeded`, `otp_expired`, and `Email link is invalid or has expired`.
+- Deleting a user does not clear that rate limit; it can be project-wide/default SMTP-level.
+- For testing, wait for the cooldown, disable email confirmation if appropriate, manually manage users in Supabase, or configure custom SMTP.
+- Use only the newest password reset email link; older reset links expire or become invalid.
+- Password reset/confirmation emails may be unreliable until the rate limit cools down or custom SMTP is configured.
+
+Run before the next push if code changes are made:
 
 ```text
 npm run lint
@@ -220,16 +244,36 @@ If the server needs restart after env changes:
 - Stop current Node/Next processes.
 - Start the dev server again.
 
+## Latest UI/Deploy Notes
+
+- Desktop title hover preview was enlarged to about 2x width with larger poster, text, spacing, and summary length.
+- Mobile/touch preview remains a sheet pattern, not hover. Final current tuning is a full-screen sheet with a top image around `46dvh`, `object-fit: contain`, tighter metadata spacing, 8-line summary clamp, and `body:has(.sheet-backdrop) { overflow: hidden; }` to hide the underlying page scrollbar while the sheet is open.
+- `appVersion` was bumped to `v2026.05.24.8`.
+- Local `npm run lint` passed.
+- Local `npm run build` passed after stopping the dev server and clearing generated `.next`/`out` folders.
+- Fresh static export includes `out/.htaccess` and `out/_next/static/...`.
+- Live site showing plain HTML means CSS/JS under `/_next/static/...` is not being served/deployed correctly. Verify Hostinger output directory is `out`, confirm the latest commit including `public/.htaccess` is deployed, and check whether `https://glist.francocongiusto.com/_next/static/...css` returns CSS instead of HTML/404.
+
+Current uncommitted files after UI tuning:
+
+```text
+CODEX_SESSION_LOG.md
+app/globals.css
+app/page.tsx
+```
+
 ## Recommended Next Steps
 
-1. Review the sign-in modal/account chip UI in the browser.
-2. Confirm Supabase email/password sign-in and account creation.
-3. Change a status/year/note while signed in.
-4. Verify rows appear in Supabase Table Editor under `lite_tracking`.
-5. Add Supabase env vars to Hostinger.
-6. Bump `appVersion`.
-7. Run `npm run lint` and `npm run build`.
-8. Commit and push only if the user asks.
+1. Re-run `npm run build` before deploy if more code changes are made.
+2. Commit the preview-sheet/hover-card UI changes when the user is happy.
+3. Push only if the user asks; Hostinger/GitHub deploy watches `main`.
+4. Verify the live plain-HTML issue by checking Hostinger output directory is `out` and latest commit includes `public/.htaccess`.
+5. After deploy, test `https://glist.francocongiusto.com/_next/static/...css` from the live page. It should return CSS, not `index.html` or 404.
+6. Add/confirm the Supabase env vars to Hostinger if not already saved.
+7. Wait for Supabase email rate limit to cool down or configure custom SMTP.
+8. Confirm email/password sign-in works on the live Hostinger domain.
+9. Change a status/year/note while signed in and verify rows appear in Supabase Table Editor under `lite_tracking`.
+10. If live cloud sync works, decide whether to keep improving auth UX or move to poster/detail polish.
 
 Potential later refinements:
 
