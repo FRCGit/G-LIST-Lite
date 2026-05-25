@@ -138,7 +138,7 @@ Earlier issue:
 Deploy badge:
 
 - `appVersion` is in `app/page.tsx`.
-- Current known value: `v2026.05.25.2`.
+- Current known value: `v2026.05.25.3`.
 - Bump before pushing visible deploy changes so the live site can be verified.
 
 Hostinger env vars needed:
@@ -261,6 +261,7 @@ If the server needs restart after env changes:
 - `eslint.config.mjs` also ignores `public/next-static/**` so local lint does not scan generated minified Next chunks after a build.
 - On May 25, live HTML finally showed `v2026.05.24.13` and `/next-static/_next/static/...`, but every referenced asset still returned `403`. Conclusion: Hostinger blocks any public URL containing `_next`, even nested under another prefix. New workaround rewrites built `out`, `.next/server/app`, and generated public chunk files to use `/glist-assets/static/...` with no `_next` segment at all; chunks are copied to `out/glist-assets/static` and `public/glist-assets/static`. `.gitignore` and ESLint ignore `public/glist-assets/**`. Version bumped to `v2026.05.25.1`.
 - The cache-busted URL `/?v=2026052501` worked, but bare `/` still served old plain HTML with `Age: 106368`, `Cache-Control: s-maxage=31536000`, and old `/_next/static` references. Added `.htaccess` `mod_headers` rules for `.html`/`.txt` to set `Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, and `Expires: 0`; bumped to `v2026.05.25.2`.
+- After `v2026.05.25.2`, bare `/` still returned old `v2026.05.24` HTML with `x-hcdn-cache-status: HIT`, `Age: 78788`, `Cache-Control: s-maxage=31536000`, and old `/_next/static`. Cache-busted URLs were intermittently `403`, likely Hostinger/WAF/CDN behavior. Added Next-level `headers()` in `next.config.mjs` with no-store/no-cache headers for all paths because Hostinger appears to serve Next output and may ignore `.htaccess`. Bumped to `v2026.05.25.3`.
 - User later reported the site still displayed plain HTML after clearing cache. Hostinger resource page showed **99% main resources used** while disk and inodes were fine (`0.23 GB / 50 GB`, `4,244 / 600,000`). This likely contributed to intermittent `503 Service Unavailable` responses during cache-busted live checks.
 - The latest Hostinger build log user pasted still showed the older postbuild output:
 
