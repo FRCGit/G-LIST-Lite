@@ -64,7 +64,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.25.3";
+const appVersion = "v2026.05.25.4";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
 
@@ -999,6 +999,7 @@ export default function Home() {
 
     if (
       !tableScroll ||
+      event.pointerType === "touch" ||
       tableScroll.scrollWidth <= tableScroll.clientWidth ||
       isInteractiveTableTarget(event.target) ||
       (event.pointerType === "mouse" && event.button !== 0)
@@ -1069,76 +1070,17 @@ export default function Home() {
   }
 
   function handleTableTouchStart(event: React.TouchEvent<HTMLDivElement>) {
-    const tableScroll = tableScrollRef.current;
-    const touch = event.touches[0];
-
-    if (
-      !tableScroll ||
-      !touch ||
-      tableScroll.scrollWidth <= tableScroll.clientWidth ||
-      isInteractiveTableTarget(event.target)
-    ) {
-      return;
+    if (!isInteractiveTableTarget(event.target)) {
+      stopTableMomentum();
     }
-
-    stopTableMomentum();
-    tableDragRef.current = {
-      pointerId: -1,
-      startX: touch.clientX,
-      startY: touch.clientY,
-      lastX: touch.clientX,
-      lastTime: performance.now(),
-      velocity: 0,
-      moved: false
-    };
   }
 
-  function handleTableTouchMove(event: React.TouchEvent<HTMLDivElement>) {
-    const tableScroll = tableScrollRef.current;
-    const drag = tableDragRef.current;
-    const touch = event.touches[0];
-
-    if (!tableScroll || !drag || drag.pointerId !== -1 || !touch) {
-      return;
-    }
-
-    const totalX = touch.clientX - drag.startX;
-    const totalY = touch.clientY - drag.startY;
-
-    if (!drag.moved && Math.abs(totalX) < 6) {
-      return;
-    }
-
-    if (!drag.moved && Math.abs(totalY) > Math.abs(totalX)) {
-      tableDragRef.current = null;
-      return;
-    }
-
-    event.preventDefault();
-
-    const now = performance.now();
-    const deltaX = touch.clientX - drag.lastX;
-    const elapsed = Math.max(now - drag.lastTime, 1);
-    const scrollDelta = -deltaX;
-
-    tableScroll.scrollLeft += scrollDelta;
+  function handleTableTouchMove() {
     syncTableScroll("table");
-
-    drag.velocity = drag.velocity * 0.65 + (scrollDelta / elapsed) * 0.35;
-    drag.lastX = touch.clientX;
-    drag.lastTime = now;
-    drag.moved = true;
   }
 
   function handleTableTouchEnd() {
-    const drag = tableDragRef.current;
-
-    if (!drag || drag.pointerId !== -1) {
-      return;
-    }
-
-    tableDragRef.current = null;
-    startTableMomentum(drag.velocity);
+    syncTableScroll("table");
   }
 
   return (
