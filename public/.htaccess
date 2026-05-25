@@ -9,6 +9,7 @@ Options -MultiViews
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  RewriteRule ^glist-assets/ - [L]
   RewriteRule ^_next/static/ - [L]
   RewriteRule ^next-static/ - [L]
 

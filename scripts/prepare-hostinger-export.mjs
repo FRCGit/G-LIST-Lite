@@ -14,10 +14,12 @@ const outDir = "out";
 const exportStaticDir = join(outDir, "_next", "static");
 const buildStaticDir = join(".next", "static");
 const serverAppDir = join(".next", "server", "app");
-const prefixedStaticPath = join("next-static", "_next", "static");
-const hostingerStaticDir = join(outDir, prefixedStaticPath);
-const publicStaticDir = join("public", prefixedStaticPath);
-const textExtensions = new Set([".html", ".js", ".json", ".txt"]);
+const publicAssetPath = join("glist-assets", "static");
+const hostingerStaticDir = join(outDir, publicAssetPath);
+const publicStaticDir = join("public", publicAssetPath);
+const textExtensions = new Set([".html", ".js", ".json", ".txt", ".rsc"]);
+const nextStaticPattern = /(?:\/next-static)?\/_next\/static\//g;
+const nextAssetPrefixPattern = /\/next-static\/_next\//g;
 
 function walk(dir, files = []) {
   for (const name of readdirSync(dir)) {
@@ -134,20 +136,25 @@ cpSync(sourceStaticDir, publicStaticDir, { recursive: true });
 
 let rewrittenFiles = 0;
 
-for (const file of walk(outDir)) {
-  if (!textExtensions.has(extensionFor(file))) {
+for (const root of [outDir, serverAppDir, publicStaticDir]) {
+  if (!existsSync(root)) {
     continue;
   }
 
-  const original = readFileSync(file, "utf8");
-  const rewritten = original.replaceAll(
-    /(?<!next-static)\/_next\/static\//g,
-    "/next-static/_next/static/"
-  );
+  for (const file of walk(root)) {
+    if (!textExtensions.has(extensionFor(file))) {
+      continue;
+    }
 
-  if (rewritten !== original) {
-    writeFileSync(file, rewritten);
-    rewrittenFiles += 1;
+    const original = readFileSync(file, "utf8");
+    const rewritten = original
+      .replaceAll(nextStaticPattern, "/glist-assets/static/")
+      .replaceAll(nextAssetPrefixPattern, "/glist-assets/");
+
+    if (rewritten !== original) {
+      writeFileSync(file, rewritten);
+      rewrittenFiles += 1;
+    }
   }
 }
 

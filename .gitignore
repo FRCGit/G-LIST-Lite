@@ -2,6 +2,7 @@
 node_modules
 out
 public/next-static
+public/glist-assets
 .env*
 next-env.d.ts
 *.log

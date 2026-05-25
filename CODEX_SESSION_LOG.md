@@ -138,7 +138,7 @@ Earlier issue:
 Deploy badge:
 
 - `appVersion` is in `app/page.tsx`.
-- Current known value: `v2026.05.24.13`.
+- Current known value: `v2026.05.25.1`.
 - Bump before pushing visible deploy changes so the live site can be verified.
 
 Hostinger env vars needed:
@@ -259,6 +259,32 @@ If the server needs restart after env changes:
 - Hostinger build for `v2026.05.24.11` failed because `out` itself was missing when `postbuild` ran. Script was updated again to create `out` from `.next/server/app` fallback files (`index.html`, RSC text files, route segments, and `_not-found` output) before copying static assets/replacing paths. Version bumped to `v2026.05.24.12`.
 - `v2026.05.24.12` deployed but live cache-busted HTML still came from Next server output and referenced `/_next/static`. Added production `assetPrefix: "/next-static"` in `next.config.mjs` and updated `prepare-hostinger-export.mjs` to copy chunks to both `out/next-static/_next/static` and `public/next-static/_next/static`. `public/next-static` is ignored because it is generated during build. Version bumped to `v2026.05.24.13`.
 - `eslint.config.mjs` also ignores `public/next-static/**` so local lint does not scan generated minified Next chunks after a build.
+- On May 25, live HTML finally showed `v2026.05.24.13` and `/next-static/_next/static/...`, but every referenced asset still returned `403`. Conclusion: Hostinger blocks any public URL containing `_next`, even nested under another prefix. New workaround rewrites built `out`, `.next/server/app`, and generated public chunk files to use `/glist-assets/static/...` with no `_next` segment at all; chunks are copied to `out/glist-assets/static` and `public/glist-assets/static`. `.gitignore` and ESLint ignore `public/glist-assets/**`. Version bumped to `v2026.05.25.1`.
+- User later reported the site still displayed plain HTML after clearing cache. Hostinger resource page showed **99% main resources used** while disk and inodes were fine (`0.23 GB / 50 GB`, `4,244 / 600,000`). This likely contributed to intermittent `503 Service Unavailable` responses during cache-busted live checks.
+- The latest Hostinger build log user pasted still showed the older postbuild output:
+
+```text
+Prepared Hostinger export: created out from .next/server/app, copied .next/static to out/next-static and rewrote 15 files.
+```
+
+That means Hostinger had **not yet built the latest pushed commit** `9d233ab Serve Next assets from public prefix`, because the current script should log both destinations:
+
+```text
+out/next-static/_next/static
+public/next-static/_next/static
+```
+
+Current suspicion: Hostinger is either deploying an older checkout/commit, still running a stale build, or resource pressure is preventing a clean fresh deploy. The cache-clear button used by the user is the correct area, but clearing cache cannot fix the old HTML/assets until the latest commit is actually deployed.
+
+Before resuming deploy debugging:
+
+1. Confirm Hostinger deploy commit is `9d233ab` or newer.
+2. If Hostinger offers the free **Boost now** resource boost, use it before redeploying.
+3. Trigger a fresh redeploy from `main`.
+4. Confirm build log contains `public/next-static/_next/static`.
+5. Then clear Hostinger cache again.
+6. Test a cache-busted URL such as `https://glist.francocongiusto.com/?v=2026052413`.
+7. Expected latest live HTML should show `v2026.05.24.13` and reference `/next-static/_next/static/...`, never `/_next/static/...`.
 
 Current uncommitted files after UI tuning:
 
