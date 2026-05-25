@@ -1316,11 +1316,15 @@ dd {
   .poster-grid {
     display: grid;
     justify-content: center;
-    grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 170px));
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .poster-grid.poster-mobile-small {
+    grid-template-columns: minmax(min(220px, 100%), min(220px, 100%));
   }
 
   .poster-grid.poster-mobile-medium {
-    grid-template-columns: minmax(min(280px, 100%), min(280px, 100%));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .poster-grid.poster-mobile-large {

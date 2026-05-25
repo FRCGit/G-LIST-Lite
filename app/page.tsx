@@ -957,12 +957,12 @@ export default function Home() {
   function startTableMomentum(initialVelocity: number) {
     const tableScroll = tableScrollRef.current;
 
-    if (!tableScroll || Math.abs(initialVelocity) < 0.08) {
+    if (!tableScroll || Math.abs(initialVelocity) < 0.05) {
       return;
     }
 
     const scroller = tableScroll;
-    let velocity = initialVelocity;
+    let velocity = initialVelocity * 0.78;
     let previousTime = performance.now();
 
     function coast(currentTime: number) {
@@ -976,9 +976,9 @@ export default function Home() {
       const atEnd =
         scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1;
 
-      velocity *= Math.pow(0.94, elapsed / 16.67);
+      velocity *= Math.pow(0.9, elapsed / 16.67);
 
-      if (Math.abs(velocity) < 0.04 || (velocity < 0 && atStart) || (velocity > 0 && atEnd)) {
+      if (Math.abs(velocity) < 0.03 || (velocity < 0 && atStart) || (velocity > 0 && atEnd)) {
         tableMomentumRef.current = null;
         return;
       }
@@ -1112,7 +1112,7 @@ export default function Home() {
     const scrollDelta = currentScrollLeft - previousScrollLeft;
 
     if (scrollDelta !== 0) {
-      drag.velocity = drag.velocity * 0.65 + (scrollDelta / elapsed) * 0.35;
+      drag.velocity = drag.velocity * 0.78 + (scrollDelta / elapsed) * 0.22;
       drag.lastScrollLeft = currentScrollLeft;
       drag.lastTime = now;
       drag.moved = true;
