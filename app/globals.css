@@ -95,7 +95,7 @@ a:hover {
   border-radius: var(--radius) 0 0 var(--radius);
   display: grid;
   gap: 10px;
-  padding: 84px 12px 0;
+  padding: 106px 12px 0;
   position: relative;
   z-index: 1;
 }
@@ -135,6 +135,43 @@ a:hover {
   stroke-linejoin: round;
   stroke-width: 2;
   width: 19px;
+}
+
+.side-rail-data {
+  position: relative;
+}
+
+.rail-menu {
+  background: #111820;
+  border: 1px solid #27323d;
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.34);
+  display: grid;
+  gap: 6px;
+  left: calc(100% + 10px);
+  min-width: 168px;
+  padding: 8px;
+  position: absolute;
+  top: 0;
+  z-index: 45;
+}
+
+.side-rail .rail-menu button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text);
+  display: block;
+  height: 34px;
+  padding: 0 10px;
+  text-align: left;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.side-rail .rail-menu button:hover {
+  background: #151c23;
+  border-color: #27323d;
 }
 
 .content-shell {
@@ -208,6 +245,7 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .primary-controls {
@@ -223,7 +261,9 @@ a:hover {
     inset 0 1px 0 rgb(255 255 255 / 0.04),
     0 8px 20px rgb(0 0 0 / 0.18);
   display: flex;
+  flex-wrap: wrap;
   gap: 22px;
+  max-width: 100%;
   min-height: 50px;
   padding: 8px 12px;
 }
@@ -282,8 +322,7 @@ a:hover {
     0 0 18px rgb(92 152 214 / 0.14);
 }
 
-.icon-segmented svg,
-.more-button svg {
+.icon-segmented svg {
   fill: none;
   height: 18px;
   stroke: currentColor;
@@ -622,30 +661,9 @@ a:hover {
   border-radius: var(--radius);
   color: var(--text);
   height: 36px;
+  max-width: 100%;
   min-width: 148px;
   padding: 0 32px 0 12px;
-}
-
-.more-button {
-  align-items: center;
-  background: #1a2129;
-  border-color: #27323d;
-  border-radius: var(--radius);
-  color: var(--text);
-  cursor: pointer;
-  display: flex;
-  height: 36px;
-  justify-content: center;
-  padding: 0 12px;
-  white-space: nowrap;
-}
-
-.more-button {
-  background: transparent;
-  border-color: transparent;
-  color: var(--muted);
-  padding: 0 4px;
-  width: 30px;
 }
 
 .status-select {
@@ -918,8 +936,18 @@ tbody tr:hover td {
   padding: 8px;
 }
 
+.poster-card a {
+  display: block;
+}
+
 .poster-card:hover {
   border-color: color-mix(in srgb, var(--link) 45%, #22303b);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .poster-card {
+    cursor: pointer;
+  }
 }
 
 .poster-frame {
@@ -1186,6 +1214,70 @@ dd {
   margin: 0;
 }
 
+@media (min-width: 761px) and (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 50px minmax(0, 1fr);
+    margin: 14px;
+  }
+
+  .side-rail {
+    padding: 106px 7px 0;
+  }
+
+  .side-rail button {
+    width: 34px;
+  }
+
+  .content-shell {
+    padding: 0 12px 20px;
+  }
+
+  .topbar {
+    width: auto !important;
+  }
+
+  .content-inner {
+    width: auto !important;
+  }
+
+  .controls,
+  .primary-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .poster-toolbar {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .toolbar-view-group,
+  .sort-control {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .poster-size-control {
+    grid-template-columns: 82px minmax(0, 1fr) 58px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .icon-segmented,
+  .sort-control select,
+  .search,
+  .reset-columns,
+  .utility-button {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
     display: block;
@@ -1199,12 +1291,28 @@ dd {
     border-radius: var(--radius) var(--radius) 0 0;
     display: flex;
     gap: 8px;
-    overflow-x: auto;
+    overflow-x: visible;
+    overflow-y: visible;
     padding: 14px 12px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
   }
 
   .side-rail button {
     flex: 0 0 36px;
+  }
+
+  .side-rail-data {
+    flex: 0 0 36px;
+  }
+
+  .rail-menu {
+    left: auto;
+    min-width: 158px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
   }
 
   .content-shell {
@@ -1296,10 +1404,6 @@ dd {
     justify-content: space-between;
     line-height: 1;
     margin-top: -2px;
-  }
-
-  .more-button {
-    justify-self: center;
   }
 
   .table-shell {

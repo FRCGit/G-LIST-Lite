@@ -64,7 +64,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.25.5";
+const appVersion = "v2026.05.25.8";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
 
@@ -78,6 +78,16 @@ type TableDragState = {
   velocity: number;
   moved: boolean;
 };
+
+function shouldUseSheetPreview(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.matchMedia(
+    "(hover: none), (pointer: coarse), (max-width: 900px)"
+  ).matches;
+}
 
 function loadColumnWidths(storageKey: string): ColumnWidths {
   try {
@@ -191,6 +201,18 @@ function NotepadIcon() {
   );
 }
 
+function BackupIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="5" rx="7" ry="3" />
+      <path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5" />
+      <path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+      <path d="M9 16l3-3 3 3" />
+      <path d="M12 13v6" />
+    </svg>
+  );
+}
+
 function RailButton({
   active,
   children,
@@ -212,16 +234,6 @@ function RailButton({
     >
       {children}
     </button>
-  );
-}
-
-function MoreIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <circle cx="12" cy="5" r="1.4" />
-      <circle cx="12" cy="12" r="1.4" />
-      <circle cx="12" cy="19" r="1.4" />
-    </svg>
   );
 }
 
@@ -275,9 +287,11 @@ export default function Home() {
   const [isCloudBusy, setIsCloudBusy] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isDataMenuOpen, setIsDataMenuOpen] = useState(false);
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const dataMenuRef = useRef<HTMLDivElement | null>(null);
   const tableDragRef = useRef<TableDragState | null>(null);
   const tableMomentumRef = useRef<number | null>(null);
   const trackingRef = useRef<Record<string, LiteTrackingEntry>>({});
@@ -447,6 +461,28 @@ export default function Home() {
 
     setIsAccountMenuOpen(false);
   }, [cloudUser]);
+
+  useEffect(() => {
+    if (!isDataMenuOpen) {
+      return;
+    }
+
+    function closeDataMenuOnOutsideClick(event: PointerEvent) {
+      if (
+        dataMenuRef.current &&
+        event.target instanceof Node &&
+        !dataMenuRef.current.contains(event.target)
+      ) {
+        setIsDataMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeDataMenuOnOutsideClick);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeDataMenuOnOutsideClick);
+    };
+  }, [isDataMenuOpen]);
 
   const visibleEntries = useMemo(() => {
     const filteredEntries = filterEntries(entries, search);
@@ -1158,6 +1194,40 @@ export default function Home() {
         >
           <NotepadIcon />
         </RailButton>
+        <div className="side-rail-data" ref={dataMenuRef}>
+          <button
+            aria-expanded={isDataMenuOpen}
+            aria-label="Data backup"
+            className={isDataMenuOpen ? "active" : ""}
+            onClick={() => setIsDataMenuOpen((open) => !open)}
+            title="Data Backup"
+            type="button"
+          >
+            <BackupIcon />
+          </button>
+          {isDataMenuOpen ? (
+            <div className="rail-menu">
+              <button
+                onClick={() => {
+                  exportTracking();
+                  setIsDataMenuOpen(false);
+                }}
+                type="button"
+              >
+                Export backup
+              </button>
+              <button
+                onClick={() => {
+                  importInputRef.current?.click();
+                  setIsDataMenuOpen(false);
+                }}
+                type="button"
+              >
+                Import backup
+              </button>
+            </div>
+          ) : null}
+        </div>
       </aside>
 
       <div className="content-shell">
@@ -1288,13 +1358,6 @@ export default function Home() {
                 </select>
               </label>
 
-              <button
-                aria-label="More options"
-                className="more-button"
-                type="button"
-              >
-                <MoreIcon />
-              </button>
             </div>
 
             {viewMode === "table" && hasCustomColumnWidths ? (
@@ -1307,16 +1370,6 @@ export default function Home() {
               </button>
             ) : null}
 
-            <button className="utility-button" onClick={exportTracking} type="button">
-              Export
-            </button>
-            <button
-              className="utility-button"
-              onClick={() => importInputRef.current?.click()}
-              type="button"
-            >
-              Import
-            </button>
             <input
               accept="application/json"
               aria-label="Import tracking JSON"
@@ -1490,8 +1543,17 @@ export default function Home() {
               <article
                 className="poster-card"
                 key={entry.id}
-                onClick={() => {
-                  if (window.matchMedia("(max-width: 760px)").matches) {
+                onClick={(event) => {
+                  const target = event.target;
+
+                  if (
+                    target instanceof Element &&
+                    target.closest("button, input, select")
+                  ) {
+                    return;
+                  }
+
+                  if (shouldUseSheetPreview()) {
                     openPreviewSheet(entry);
                   }
                 }}
@@ -1501,6 +1563,13 @@ export default function Home() {
               >
                 <a
                   href={entry.pageTitle ? entry.sourceUrl : undefined}
+                  onClick={(event) => {
+                    if (shouldUseSheetPreview()) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openPreviewSheet(entry);
+                    }
+                  }}
                   rel="noreferrer"
                   target={entry.pageTitle ? "_blank" : undefined}
                 >
@@ -1800,7 +1869,7 @@ function TitleCell({
     <a
       href={entry.sourceUrl}
       onClick={(event) => {
-        if (window.matchMedia("(max-width: 760px)").matches) {
+        if (shouldUseSheetPreview()) {
           event.preventDefault();
           onClick(entry);
         }
@@ -1833,7 +1902,12 @@ function PreviewSheet({
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <button className="sheet-close" onClick={onClose} type="button">
+        <button
+          aria-label="Close preview"
+          className="sheet-close"
+          onClick={onClose}
+          type="button"
+        >
           Close
         </button>
         <div className="sheet-content">

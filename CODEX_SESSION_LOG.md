@@ -319,3 +319,37 @@ Potential later refinements:
 - Consider hiding poster controls until hover on desktop, but keep them visible on touch.
 - Add watched-year badge on watched poster cards.
 - Add a detail sheet so poster cards stay cleaner.
+
+## 2026-05-25 Handoff Update
+
+Current local UI/version state before push:
+
+- `appVersion` is `v2026.05.25.8`.
+- iPad/tablet toolbar wrapping was improved so the sort select no longer clips in landscape.
+- Touch/tablet poster taps now open the preview sheet instead of jumping straight to Wikipedia.
+- Preview sheet has an explicit close button.
+- The unused three-dot toolbar button was removed.
+- Desktop and tablet side-rail icon alignment was tuned.
+- Import/export moved out of the main toolbar into a left-rail backup icon menu.
+- The backup menu closes when clicking/tapping outside it.
+- Mobile rail backup menu opens under the icon instead of using the desktop side flyout.
+- Poster wall card artwork was intentionally **not** enabled; poster cards remain placeholder frames for now.
+
+Wikipedia table verification:
+
+- Ran `npm run validate:wikipedia`.
+- Result: `Wikipedia rows: 94`, `Snapshot rows: 94`.
+- Validator reported: `Snapshot matches the live Wikipedia media table.`
+- The app snapshot in `data/g-list-lite-media.json` matches the live Wikipedia table fields/order for `Name`, `Media`, `Release date`, and `Timeline and year`.
+
+README update:
+
+- README was rewritten into a more standard project format.
+- Deployment notes now describe the current Hostinger `/glist-assets/static/...` workaround instead of the older `_next/static` deployment assumption.
+- Roadmap now records that poster art in poster wall cards is deferred until the source, matching rules, attribution, and fallback behavior are decided.
+
+Recommended next work:
+
+1. If poster art is revisited, use official APIs rather than scraping. A hybrid TMDB/manual override/Wikimedia fallback plan is likely best.
+2. Consider adding outside-click/Escape handling for the account dropdown too.
+3. Add clearer cloud sync states such as `Saved`, `Saving`, and `Offline`.
