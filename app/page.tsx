@@ -64,7 +64,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.25.4";
+const appVersion = "v2026.05.25.5";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
 
@@ -73,6 +73,7 @@ type TableDragState = {
   startX: number;
   startY: number;
   lastX: number;
+  lastScrollLeft?: number;
   lastTime: number;
   velocity: number;
   moved: boolean;
@@ -1070,17 +1071,67 @@ export default function Home() {
   }
 
   function handleTableTouchStart(event: React.TouchEvent<HTMLDivElement>) {
-    if (!isInteractiveTableTarget(event.target)) {
-      stopTableMomentum();
+    const tableScroll = tableScrollRef.current;
+    const touch = event.touches[0];
+
+    if (
+      !tableScroll ||
+      !touch ||
+      tableScroll.scrollWidth <= tableScroll.clientWidth ||
+      isInteractiveTableTarget(event.target)
+    ) {
+      return;
     }
+
+    stopTableMomentum();
+    tableDragRef.current = {
+      pointerId: -1,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastX: touch.clientX,
+      lastScrollLeft: tableScroll.scrollLeft,
+      lastTime: performance.now(),
+      velocity: 0,
+      moved: false
+    };
   }
 
   function handleTableTouchMove() {
+    const tableScroll = tableScrollRef.current;
+    const drag = tableDragRef.current;
+
+    if (!tableScroll || !drag || drag.pointerId !== -1) {
+      syncTableScroll("table");
+      return;
+    }
+
+    const now = performance.now();
+    const currentScrollLeft = tableScroll.scrollLeft;
+    const previousScrollLeft = drag.lastScrollLeft ?? currentScrollLeft;
+    const elapsed = Math.max(now - drag.lastTime, 1);
+    const scrollDelta = currentScrollLeft - previousScrollLeft;
+
+    if (scrollDelta !== 0) {
+      drag.velocity = drag.velocity * 0.65 + (scrollDelta / elapsed) * 0.35;
+      drag.lastScrollLeft = currentScrollLeft;
+      drag.lastTime = now;
+      drag.moved = true;
+    }
+
     syncTableScroll("table");
   }
 
   function handleTableTouchEnd() {
+    const drag = tableDragRef.current;
+
+    if (!drag || drag.pointerId !== -1) {
+      syncTableScroll("table");
+      return;
+    }
+
+    tableDragRef.current = null;
     syncTableScroll("table");
+    startTableMomentum(drag.velocity);
   }
 
   return (

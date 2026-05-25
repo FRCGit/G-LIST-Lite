@@ -138,7 +138,7 @@ Earlier issue:
 Deploy badge:
 
 - `appVersion` is in `app/page.tsx`.
-- Current known value: `v2026.05.25.4`.
+- Current known value: `v2026.05.25.5`.
 - Bump before pushing visible deploy changes so the live site can be verified.
 
 Hostinger env vars needed:
@@ -264,6 +264,7 @@ If the server needs restart after env changes:
 - After `v2026.05.25.2`, bare `/` still returned old `v2026.05.24` HTML with `x-hcdn-cache-status: HIT`, `Age: 78788`, `Cache-Control: s-maxage=31536000`, and old `/_next/static`. Cache-busted URLs were intermittently `403`, likely Hostinger/WAF/CDN behavior. Added Next-level `headers()` in `next.config.mjs` with no-store/no-cache headers for all paths because Hostinger appears to serve Next output and may ignore `.htaccess`. Bumped to `v2026.05.25.3`.
 - User found correct Hostinger CDN page under Performance -> CDN with a **Flush cache** button. No-cache preview showed the styled latest app at `v2026.05.25.3`, confirming code/deploy worked and bare `/` was stale CDN cache.
 - Mobile table horizontal swipe felt delayed until finger lift. Cause was custom touch drag plus `touch-action: pan-y` fighting native mobile horizontal overflow. Updated table touch behavior to let native mobile scroll handle horizontal pan immediately, disabled custom pointer drag for touch pointers, and changed coarse-pointer CSS to `touch-action: pan-x pan-y`. Desktop/mouse custom drag remains. Bumped to `v2026.05.25.4`.
+- User then reported mobile horizontal swipe moved while dragging but did not continue/glide after finger lift. Added passive touch velocity tracking based on native `scrollLeft` changes and feeds that velocity into existing table momentum on touch end. Native drag is still used during finger movement; synthetic momentum only starts after lift. Bumped to `v2026.05.25.5`.
 - User later reported the site still displayed plain HTML after clearing cache. Hostinger resource page showed **99% main resources used** while disk and inodes were fine (`0.23 GB / 50 GB`, `4,244 / 600,000`). This likely contributed to intermittent `503 Service Unavailable` responses during cache-busted live checks.
 - The latest Hostinger build log user pasted still showed the older postbuild output:
 
