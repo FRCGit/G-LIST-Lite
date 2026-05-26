@@ -79,7 +79,7 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.26.9";
+const appVersion = "v2026.05.26.10";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
 
@@ -1205,12 +1205,12 @@ export default function Home() {
   function startTableMomentum(initialVelocity: number) {
     const tableScroll = tableScrollRef.current;
 
-    if (!tableScroll || Math.abs(initialVelocity) < 0.05) {
+    if (!tableScroll || Math.abs(initialVelocity) < 0.035) {
       return;
     }
 
     const scroller = tableScroll;
-    let velocity = initialVelocity * 0.78;
+    let velocity = initialVelocity * 1.35;
     let previousTime = performance.now();
 
     function coast(currentTime: number) {
@@ -1224,9 +1224,9 @@ export default function Home() {
       const atEnd =
         scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1;
 
-      velocity *= Math.pow(0.9, elapsed / 16.67);
+      velocity *= Math.pow(0.955, elapsed / 16.67);
 
-      if (Math.abs(velocity) < 0.03 || (velocity < 0 && atStart) || (velocity > 0 && atEnd)) {
+      if (Math.abs(velocity) < 0.018 || (velocity < 0 && atStart) || (velocity > 0 && atEnd)) {
         tableMomentumRef.current = null;
         return;
       }
@@ -1360,7 +1360,7 @@ export default function Home() {
     const scrollDelta = currentScrollLeft - previousScrollLeft;
 
     if (scrollDelta !== 0) {
-      drag.velocity = drag.velocity * 0.78 + (scrollDelta / elapsed) * 0.22;
+      drag.velocity = drag.velocity * 0.62 + (scrollDelta / elapsed) * 0.38;
       drag.lastScrollLeft = currentScrollLeft;
       drag.lastTime = now;
       drag.moved = true;

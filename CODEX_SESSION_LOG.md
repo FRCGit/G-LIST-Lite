@@ -383,6 +383,7 @@ Status rename note:
 - Added a table `Notes` column after `Year`; it opens a responsive per-title note popup. These row notes remain in tracking data and can sync through Supabase.
 - Watched-year sorting now treats real four-digit years as valid values and keeps blanks or placeholders such as `?` below valid years in both ascending and descending sorts.
 - `v2026.05.26.9` moves the table `Notes` column to the far right, after `Lang`.
+- `v2026.05.26.10` increases mobile horizontal table momentum so left/right swipes coast farther after finger lift while preserving native vertical scroll.
 
 Verification:
 
