@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import mediaEntries from "../data/g-list-lite-media.json";
@@ -79,9 +80,25 @@ const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.26.10";
+const appVersion = "v2026.05.26.16";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
+
+function GListLogo() {
+  return (
+    <h1 className="brand-logo">
+      <Image
+        alt="G-LIST"
+        className="brand-logo-image"
+        height="300"
+        priority
+        src="/g-list-logo-a%20-%20Copy.png"
+        unoptimized
+        width="1040"
+      />
+    </h1>
+  );
+}
 
 type TableDragState = {
   pointerId: number;
@@ -1446,7 +1463,7 @@ export default function Home() {
       <div className="content-inner" style={{ width: `${tableWidth}px` }}>
       <header className="topbar" style={{ width: `${tableWidth}px` }}>
         <div className="topbar-heading">
-          <h1>G-LIST</h1>
+          <GListLogo />
 
           <div className="account-control" aria-label="Account">
             {cloudAuthState === "checking" ? (

@@ -206,14 +206,6 @@ a:hover {
   transition: width 120ms ease;
 }
 
-.topbar h1 {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 30px;
-  font-weight: 400;
-  line-height: 1.3;
-  margin: 0 0 6px;
-}
-
 .topbar-heading {
   align-items: center;
   display: flex;
@@ -224,6 +216,19 @@ a:hover {
 
 .topbar-heading h1 {
   margin: 0;
+}
+
+.brand-logo {
+  align-items: center;
+  display: inline-flex;
+  line-height: 1;
+  min-height: 48px;
+}
+
+.brand-logo-image {
+  display: block;
+  height: auto;
+  width: 174px;
 }
 
 .item-count {
