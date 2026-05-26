@@ -1,6 +1,10 @@
 "use client";
 
-import type { LiteTrackingEntry, WatchStatus } from "./lite-types";
+import type {
+  LanguagePreference,
+  LiteTrackingEntry,
+  WatchStatus
+} from "./lite-types";
 
 const trackingKey = "g-list-lite-tracking-v1";
 
@@ -23,6 +27,7 @@ export function loadTracking(): Record<string, LiteTrackingEntry> {
         titleId,
         {
           ...entry,
+          lang: migrateLang(entry.lang),
           status: migrateStatus(entry.status)
         }
       ])
@@ -38,4 +43,24 @@ export function saveTracking(tracking: Record<string, LiteTrackingEntry>): void 
 
 function migrateStatus(status: string): WatchStatus {
   return status === "Skipped" ? "Up Next" : (status as WatchStatus);
+}
+
+function migrateLang(lang: string | undefined): LanguagePreference | undefined {
+  if (lang === "eng dub") {
+    return "Eng";
+  }
+
+  if (lang === "eng sub") {
+    return "Sub";
+  }
+
+  if (lang === "jap") {
+    return "Jpn";
+  }
+
+  if (!lang || lang === "Eng" || lang === "Sub" || lang === "Jpn") {
+    return lang as LanguagePreference | undefined;
+  }
+
+  return undefined;
 }

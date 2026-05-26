@@ -15,7 +15,10 @@ https://glist.francocongiusto.com
 - Poster wall view with adjustable card sizing.
 - Notes view for per-title notes.
 - Desktop hover previews and touch/mobile preview sheets.
-- Watch statuses: `Unwatched`, `Watching`, `Watched`, and `Up Next`.
+- Watch statuses: `Unwatched`, `Watching`, `Watched`, and `To Watch`.
+- Per-title `lang` dropdown with `Eng`, `Sub`, and `Jpn` options.
+- Per-title notes popup from the table.
+- Simple local notepad view for free-form notes.
 - Watched-year field for completed titles.
 - JSON backup import/export from the rail backup menu.
 - Local `localStorage` persistence.
@@ -193,6 +196,9 @@ After deployment, if the live site shows plain HTML, flush the Hostinger CDN cac
 
 - The visible deploy badge is defined in `app/page.tsx` as `appVersion`.
 - Local tracking key: `g-list-lite-tracking-v1`.
+- `To Watch` is a UI label for the stored status value `Up Next`, preserving existing local and Supabase data.
+- The `lang` field is saved in tracking data. If the Supabase table has not yet been migrated, cloud sync falls back without `lang` until `supabase/schema.sql` is applied.
+- Row notes are part of tracking data and can sync through Supabase. The standalone Notes view notepad uses local browser storage under `g-list-lite-notepad-v1`.
 - Desktop table column widths key: `g-list-lite-column-widths-v1`.
 - Compact/mobile column widths key: `g-list-lite-compact-column-widths-v1`.
 - Poster size key: `g-list-lite-poster-size-v1`.

@@ -353,3 +353,39 @@ Recommended next work:
 1. If poster art is revisited, use official APIs rather than scraping. A hybrid TMDB/manual override/Wikimedia fallback plan is likely best.
 2. Consider adding outside-click/Escape handling for the account dropdown too.
 3. Add clearer cloud sync states such as `Saved`, `Saving`, and `Offline`.
+
+## 2026-05-26 Handoff Update
+
+Implemented after user request:
+
+- Added outside-click and Escape-key closing for the signed-in account dropdown.
+- Added explicit cloud sync UI states: `Checking`, `Syncing`, `Saving`, `Saved`, `Offline`, `Needs attention`, `Signed out`, and `Local`.
+- Account chip now displays the current sync state instead of always saying `Synced`.
+- Account dropdown now shows a small status dot and a clearer detail message, such as `Saved to user@example.com`.
+- Local edits still save to `localStorage`; when offline, cloud sync is marked `Offline` and will retry when the browser returns online.
+- Visible deploy badge bumped to `v2026.05.26.1`.
+
+Status rename note:
+
+- Renaming `Up Next` to `To Watch` should not be done by simply changing the stored value, because Supabase currently has a check constraint allowing `Up Next`.
+- Safest option is to keep storing `Up Next` and display `To Watch` in UI labels.
+- If the database value itself must change later, migrate existing rows and update the Supabase check constraint in the same deploy.
+- Implemented this safe UI-only rename in `v2026.05.26.2`; select options and preview status text now display `To Watch`, while storage/Supabase still use `Up Next`.
+- `v2026.05.26.3` reduces account-chip flicker when returning to the G-LIST browser tab by preserving the stable sync state for same-user Supabase auth refresh events.
+- `v2026.05.26.4` changes the UI-only status label from `Watch Next` to `To Watch`; storage/Supabase remain on `Up Next`.
+- `v2026.05.26.5` adds a table `Lang` column with a dropdown for empty, `Eng`, `Sub`, and `Jpn`.
+- `lang` is stored on `LiteTrackingEntry` and in Supabase as `lite_tracking.lang`; cloud sync falls back gracefully if the live table has not yet been migrated.
+- First-pass language defaults are implemented in `app/lite-helpers.ts`: known dubbed titles default to `Eng`, obscure/no-English-release items default to `Jpn`, and remaining titles default to `Sub`.
+- Apply `supabase/schema.sql` in Supabase to persist `lang` in the cloud database. Until then, the UI/localStorage work, but cloud sync omits `lang`.
+- The local loader migrates older `eng dub`, `eng sub`, and `jap` values to `Eng`, `Sub`, and `Jpn`.
+- `v2026.05.26.7` keeps `Year` directly after `Watch status` and places `Lang` at the far right.
+- `v2026.05.26.8` changes the Notes view to a single fluid local notepad stored under `g-list-lite-notepad-v1`.
+- Added a table `Notes` column after `Year`; it opens a responsive per-title note popup. These row notes remain in tracking data and can sync through Supabase.
+- Watched-year sorting now treats real four-digit years as valid values and keeps blanks or placeholders such as `?` below valid years in both ascending and descending sorts.
+- `v2026.05.26.9` moves the table `Notes` column to the far right, after `Lang`.
+
+Verification:
+
+- `npm run lint` passed.
+- `npm run build` passed after clearing generated `.next` and `out` folders inside the repo.
+- Postbuild log confirmed assets copied to `out/glist-assets/static` and `public/glist-assets/static`, with built references rewritten.

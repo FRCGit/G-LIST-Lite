@@ -5,7 +5,10 @@ import type { CSSProperties } from "react";
 import mediaEntries from "../data/g-list-lite-media.json";
 import {
   filterEntries,
+  getLanguageForEntry,
   getTrackingForTitle,
+  getWatchStatusLabel,
+  languageOptions,
   sortEntries,
   watchStatuses
 } from "./lite-helpers";
@@ -47,6 +50,15 @@ type TableColumn = {
 
 type ColumnWidths = Partial<Record<SortKey, number>>;
 type CloudAuthState = "checking" | "signedOut" | "signedIn";
+type CloudSyncState =
+  | "checking"
+  | "signedOut"
+  | "syncing"
+  | "saving"
+  | "saved"
+  | "offline"
+  | "error"
+  | "unconfigured";
 type AuthModalMode = "signIn" | "recover" | "updatePassword";
 
 const entries = mediaEntries as LiteMediaEntry[];
@@ -56,15 +68,18 @@ const sortOptions: { key: SortKey; label: string }[] = [
   { key: "releaseDate", label: "Release Date" },
   { key: "timelineAndYear", label: "Timeline" },
   { key: "status", label: "Watch Status" },
-  { key: "watchedYear", label: "Year" }
+  { key: "watchedYear", label: "Year" },
+  { key: "lang", label: "Lang" },
+  { key: "notes", label: "Notes" }
 ];
 const columnWidthsKey = "g-list-lite-column-widths-v1";
 const compactColumnWidthsKey = "g-list-lite-compact-column-widths-v1";
+const notepadKey = "g-list-lite-notepad-v1";
 const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
-const appVersion = "v2026.05.25.8";
+const appVersion = "v2026.05.26.9";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
 
@@ -284,25 +299,50 @@ export default function Home() {
   const [cloudMessage, setCloudMessage] = useState(
     isCloudConfigured() ? "Cloud sync signed out" : "Cloud sync not configured"
   );
+  const [cloudSyncState, setCloudSyncState] = useState<CloudSyncState>(
+    isCloudConfigured() ? "checking" : "unconfigured"
+  );
+  const [isOnline, setIsOnline] = useState(true);
   const [isCloudBusy, setIsCloudBusy] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isDataMenuOpen, setIsDataMenuOpen] = useState(false);
+  const [noteEntry, setNoteEntry] = useState<LiteMediaEntry | null>(null);
+  const [notepadText, setNotepadText] = useState("");
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const dataMenuRef = useRef<HTMLDivElement | null>(null);
   const tableDragRef = useRef<TableDragState | null>(null);
   const tableMomentumRef = useRef<number | null>(null);
+  const cloudUserRef = useRef<CloudUser | null>(null);
+  const hasHydratedCloudRef = useRef(false);
   const trackingRef = useRef<Record<string, LiteTrackingEntry>>({});
 
   useEffect(() => {
     setTracking(loadTracking());
     setColumnWidths(loadColumnWidths(columnWidthsKey));
     setCompactColumnWidths(loadColumnWidths(compactColumnWidthsKey));
+    setNotepadText(window.localStorage.getItem(notepadKey) ?? "");
     setPosterSize(loadPosterSize());
     setUsesCompactColumns(window.matchMedia("(max-width: 760px)").matches);
     setHasLoadedLocalState(true);
+  }, []);
+
+  useEffect(() => {
+    function updateOnlineState() {
+      setIsOnline(navigator.onLine);
+    }
+
+    updateOnlineState();
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
   }, []);
 
   useEffect(() => {
@@ -329,18 +369,55 @@ export default function Home() {
   }, [hasLoadedLocalState, tracking]);
 
   useEffect(() => {
+    cloudUserRef.current = cloudUser;
+  }, [cloudUser]);
+
+  useEffect(() => {
+    hasHydratedCloudRef.current = hasHydratedCloud;
+  }, [hasHydratedCloud]);
+
+  useEffect(() => {
     const supabase = getSupabaseClient();
 
     if (!supabase) {
       setCloudAuthState("signedOut");
+      setCloudSyncState("unconfigured");
       return;
+    }
+
+    function applySessionUser(sessionUser: CloudUser | null) {
+      const previousUserId = cloudUserRef.current?.id;
+      const nextUserId = sessionUser?.id;
+      const isSameSignedInUser = Boolean(
+        sessionUser && previousUserId === nextUserId
+      );
+
+      cloudUserRef.current = sessionUser;
+
+      setCloudUser((currentUser) => {
+        if (sessionUser && currentUser?.id === sessionUser.id) {
+          return currentUser;
+        }
+
+        return sessionUser;
+      });
+
+      setCloudAuthState(sessionUser ? "signedIn" : "signedOut");
+
+      if (!sessionUser) {
+        setCloudSyncState("signedOut");
+        return;
+      }
+
+      if (!isSameSignedInUser || !hasHydratedCloudRef.current) {
+        setCloudSyncState("checking");
+      }
     }
 
     supabase.auth.getSession().then(({ data }) => {
       const sessionUser = data.session?.user ?? null;
 
-      setCloudUser(sessionUser);
-      setCloudAuthState(sessionUser ? "signedIn" : "signedOut");
+      applySessionUser(sessionUser);
     });
 
     const {
@@ -348,8 +425,7 @@ export default function Home() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       const sessionUser = session?.user ?? null;
 
-      setCloudUser(sessionUser);
-      setCloudAuthState(sessionUser ? "signedIn" : "signedOut");
+      applySessionUser(sessionUser);
 
       if (_event === "PASSWORD_RECOVERY") {
         setAuthPassword("");
@@ -375,7 +451,14 @@ export default function Home() {
 
     async function hydrateCloudTracking() {
       setIsCloudBusy(true);
+      setCloudSyncState(isOnline ? "syncing" : "offline");
       setCloudMessage("Syncing cloud data");
+
+      if (!isOnline) {
+        setIsCloudBusy(false);
+        setCloudMessage("Offline. Local changes will sync later");
+        return;
+      }
 
       try {
         const cloudTracking = await loadCloudTracking(activeCloudUser.id);
@@ -394,10 +477,12 @@ export default function Home() {
 
         if (isCurrent) {
           setHasHydratedCloud(true);
-          setCloudMessage(`Cloud sync on: ${activeCloudUser.email ?? "signed in"}`);
+          setCloudSyncState("saved");
+          setCloudMessage("Saved");
         }
       } catch {
         if (isCurrent) {
+          setCloudSyncState("error");
           setCloudMessage("Cloud sync needs attention");
         }
       } finally {
@@ -412,28 +497,41 @@ export default function Home() {
     return () => {
       isCurrent = false;
     };
-  }, [cloudUser, hasLoadedLocalState]);
+  }, [cloudUser, hasLoadedLocalState, isOnline]);
 
   useEffect(() => {
     if (!cloudUser || !hasHydratedCloud || !hasLoadedLocalState) {
       return;
     }
 
+    if (!isOnline) {
+      setCloudSyncState("offline");
+      setCloudMessage("Offline. Local changes will sync later");
+      return;
+    }
+
     const timeoutId = window.setTimeout(() => {
-      setCloudMessage("Saving to cloud");
+      setCloudSyncState("saving");
+      setCloudMessage("Saving");
       upsertCloudTrackingBatch(cloudUser.id, Object.values(tracking))
         .then(() => {
-          setCloudMessage(`Cloud sync on: ${cloudUser.email ?? "signed in"}`);
+          setCloudSyncState("saved");
+          setCloudMessage("Saved");
         })
         .catch(() => {
-          setCloudMessage("Cloud save failed");
+          setCloudSyncState(navigator.onLine ? "error" : "offline");
+          setCloudMessage(
+            navigator.onLine
+              ? "Cloud save failed"
+              : "Offline. Local changes will sync later"
+          );
         });
     }, 600);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [cloudUser, hasHydratedCloud, hasLoadedLocalState, tracking]);
+  }, [cloudUser, hasHydratedCloud, hasLoadedLocalState, isOnline, tracking]);
 
   useEffect(() => {
     if (hasLoadedLocalState) {
@@ -454,13 +552,50 @@ export default function Home() {
   }, [hasLoadedLocalState, posterSize]);
 
   useEffect(() => {
+    if (hasLoadedLocalState) {
+      window.localStorage.setItem(notepadKey, notepadText);
+    }
+  }, [hasLoadedLocalState, notepadText]);
+
+  useEffect(() => {
     if (cloudUser) {
       setIsSignInOpen(false);
       return;
     }
 
     setIsAccountMenuOpen(false);
+    setCloudSyncState(isCloudConfigured() ? "signedOut" : "unconfigured");
   }, [cloudUser]);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) {
+      return;
+    }
+
+    function closeAccountMenuOnOutsideClick(event: PointerEvent) {
+      if (
+        accountMenuRef.current &&
+        event.target instanceof Node &&
+        !accountMenuRef.current.contains(event.target)
+      ) {
+        setIsAccountMenuOpen(false);
+      }
+    }
+
+    function closeAccountMenuOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsAccountMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeAccountMenuOnOutsideClick);
+    document.addEventListener("keydown", closeAccountMenuOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeAccountMenuOnOutsideClick);
+      document.removeEventListener("keydown", closeAccountMenuOnEscape);
+    };
+  }, [isAccountMenuOpen]);
 
   useEffect(() => {
     if (!isDataMenuOpen) {
@@ -484,6 +619,24 @@ export default function Home() {
     };
   }, [isDataMenuOpen]);
 
+  useEffect(() => {
+    if (!noteEntry) {
+      return;
+    }
+
+    function closeNoteOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setNoteEntry(null);
+      }
+    }
+
+    document.addEventListener("keydown", closeNoteOnEscape);
+
+    return () => {
+      document.removeEventListener("keydown", closeNoteOnEscape);
+    };
+  }, [noteEntry]);
+
   const visibleEntries = useMemo(() => {
     const filteredEntries = filterEntries(entries, search);
 
@@ -493,24 +646,6 @@ export default function Home() {
 
     return sortEntries(filteredEntries, tracking, sortKey, sortDirection);
   }, [search, sortDirection, sortKey, tracking]);
-  const notesEntries = useMemo(() => {
-    return filterEntries(entries, search).sort((a, b) => {
-      const nameResult = a.name.localeCompare(b.name, undefined, {
-        numeric: true,
-        sensitivity: "base"
-      });
-
-      if (nameResult !== 0) {
-        return nameResult;
-      }
-
-      return a.releaseDate.localeCompare(b.releaseDate, undefined, {
-        numeric: true,
-        sensitivity: "base"
-      });
-    });
-  }, [search]);
-
   function updateTracking(titleId: string, update: Partial<LiteTrackingEntry>) {
     setTracking((current) => {
       const previous = getTrackingForTitle(current, titleId);
@@ -541,6 +676,7 @@ export default function Home() {
     }
 
     setIsCloudBusy(true);
+    setCloudSyncState("checking");
     setCloudMessage("Signing in");
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -551,6 +687,7 @@ export default function Home() {
     setIsCloudBusy(false);
 
     if (error) {
+      setCloudSyncState("signedOut");
       setCloudMessage(error.message || "Sign in failed");
       return;
     }
@@ -573,6 +710,7 @@ export default function Home() {
     }
 
     setIsCloudBusy(true);
+    setCloudSyncState("checking");
     setCloudMessage("Creating account");
 
     const { error } = await supabase.auth.signUp({
@@ -583,6 +721,7 @@ export default function Home() {
     setIsCloudBusy(false);
 
     if (error) {
+      setCloudSyncState("signedOut");
       setCloudMessage(error.message || "Account creation failed");
       return;
     }
@@ -705,12 +844,52 @@ export default function Home() {
     setCloudUser(null);
     setCloudAuthState("signedOut");
     setHasHydratedCloud(false);
+    setCloudSyncState("signedOut");
     setCloudMessage("Cloud sync signed out");
     setIsCloudBusy(false);
   }
 
   function getAccountInitial() {
     return (cloudUser?.email?.trim()[0] ?? "G").toUpperCase();
+  }
+
+  function getCloudSyncLabel() {
+    if (!isCloudConfigured()) {
+      return "Local";
+    }
+
+    switch (cloudSyncState) {
+      case "checking":
+        return "Checking";
+      case "syncing":
+        return "Syncing";
+      case "saving":
+        return "Saving";
+      case "saved":
+        return "Saved";
+      case "offline":
+        return "Offline";
+      case "error":
+        return "Needs attention";
+      case "signedOut":
+        return "Signed out";
+      case "unconfigured":
+        return "Local";
+      default:
+        return "Sync";
+    }
+  }
+
+  function getCloudSyncDetail() {
+    if (!isCloudConfigured()) {
+      return "Cloud sync is not configured";
+    }
+
+    if (cloudSyncState === "saved" && cloudUser?.email) {
+      return `Saved to ${cloudUser.email}`;
+    }
+
+    return cloudMessage;
   }
 
   function showPreview(entry: LiteMediaEntry, event: React.MouseEvent) {
@@ -822,6 +1001,39 @@ export default function Home() {
           placeholder="Year"
           value={entryTracking.watchedYear ?? ""}
         />
+      )
+    },
+    {
+      key: "lang",
+      label: "Lang",
+      className: "lang-cell",
+      defaultWidth: 130,
+      minWidth: 112,
+      maxWidth: 180,
+      render: (entry, entryTracking) => (
+        <LangSelect
+          onChange={(lang) => updateTracking(entry.id, { lang })}
+          value={getLanguageForEntry(entry, entryTracking)}
+        />
+      )
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      className: "notes-cell",
+      defaultWidth: 92,
+      minWidth: 82,
+      maxWidth: 140,
+      render: (entry, entryTracking) => (
+        <button
+          aria-label={`Notes for ${entry.name}`}
+          className={entryTracking.notes ? "note-pop-button has-note" : "note-pop-button"}
+          onClick={() => setNoteEntry(entry)}
+          title={entryTracking.notes ? "Edit note" : "Add note"}
+          type="button"
+        >
+          {entryTracking.notes ? "Note" : "Add"}
+        </button>
       )
     }
   ];
@@ -1246,7 +1458,7 @@ export default function Home() {
                 Checking
               </button>
             ) : cloudUser ? (
-              <div className="account-menu-wrap">
+              <div className="account-menu-wrap" ref={accountMenuRef}>
                 <button
                   aria-expanded={isAccountMenuOpen}
                   className="account-button account-chip"
@@ -1254,14 +1466,22 @@ export default function Home() {
                   type="button"
                 >
                   <span className="account-initial">{getAccountInitial()}</span>
-                  <span>Synced</span>
+                  <span>{getCloudSyncLabel()}</span>
                   <span aria-hidden="true">▾</span>
                 </button>
 
                 {isAccountMenuOpen ? (
                   <div className="account-menu">
                     <p className="account-email">{cloudUser.email}</p>
-                    <p className="account-status">{cloudMessage}</p>
+                    <p
+                      className={`account-status account-status-${cloudSyncState.replace(
+                        "signedOut",
+                        "signed-out"
+                      )}`}
+                    >
+                      <span aria-hidden="true" className="account-status-dot" />
+                      {getCloudSyncDetail()}
+                    </p>
                     <button
                       className="account-menu-action"
                       disabled={isCloudBusy}
@@ -1502,29 +1722,13 @@ export default function Home() {
           </div>
         </section>
       ) : viewMode === "notes" ? (
-        <section className="notes-list" aria-label="Gundam title notes">
-          {notesEntries.map((entry) => {
-            const entryTracking = getTrackingForTitle(tracking, entry.id);
-
-            return (
-              <article className="note-card" key={entry.id}>
-                <div className="note-card-header">
-                  <h2>{entry.name}</h2>
-                  <p>
-                    {entry.media} &middot; {entry.releaseDate}
-                  </p>
-                </div>
-                <textarea
-                  aria-label={`Notes for ${entry.name}`}
-                  onChange={(event) =>
-                    updateTracking(entry.id, { notes: event.target.value })
-                  }
-                  placeholder="Notes"
-                  value={entryTracking.notes ?? ""}
-                />
-              </article>
-            );
-          })}
+        <section className="notepad-view" aria-label="G-LIST notepad">
+          <textarea
+            aria-label="Notepad"
+            onChange={(event) => setNotepadText(event.target.value)}
+            placeholder="Notes"
+            value={notepadText}
+          />
         </section>
       ) : (
         <section
@@ -1615,6 +1819,40 @@ export default function Home() {
           onClose={() => setSelectedEntry(null)}
           tracking={getTrackingForTitle(tracking, selectedEntry.id)}
         />
+      ) : null}
+
+      {noteEntry ? (
+        <div
+          className="modal-backdrop note-modal-backdrop"
+          onClick={() => setNoteEntry(null)}
+          role="presentation"
+        >
+          <section
+            aria-modal="true"
+            aria-label={`Notes for ${noteEntry.name}`}
+            className="note-modal"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <button
+              aria-label="Close notes"
+              className="modal-close"
+              onClick={() => setNoteEntry(null)}
+              type="button"
+            >
+              x
+            </button>
+            <h2>{noteEntry.name}</h2>
+            <textarea
+              aria-label={`Notes for ${noteEntry.name}`}
+              onChange={(event) =>
+                updateTracking(noteEntry.id, { notes: event.target.value })
+              }
+              placeholder="Notes"
+              value={getTrackingForTitle(tracking, noteEntry.id).notes ?? ""}
+            />
+          </section>
+        </div>
       ) : null}
 
       {isSignInOpen ? (
@@ -1938,7 +2176,7 @@ function PreviewSheet({
               <div>
                 <dt>Status</dt>
                 <dd>
-                  {tracking.status}
+                  {getWatchStatusLabel(tracking.status)}
                   {tracking.watchedYear ? `, ${tracking.watchedYear}` : ""}
                 </dd>
               </div>
@@ -1976,7 +2214,32 @@ function StatusSelect({
     >
       {watchStatuses.map((status) => (
         <option key={status} value={status}>
-          {status}
+          {getWatchStatusLabel(status)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function LangSelect({
+  onChange,
+  value
+}: {
+  onChange: (lang: (typeof languageOptions)[number]) => void;
+  value: (typeof languageOptions)[number];
+}) {
+  return (
+    <select
+      aria-label="Language"
+      className="lang-select"
+      onChange={(event) =>
+        onChange(event.target.value as (typeof languageOptions)[number])
+      }
+      value={value}
+    >
+      {languageOptions.map((lang) => (
+        <option key={lang || "empty"} value={lang}>
+          {lang}
         </option>
       ))}
     </select>
@@ -2023,7 +2286,7 @@ function PreviewCard({
           <div>
             <dt>Status</dt>
             <dd>
-              {tracking.status}
+              {getWatchStatusLabel(tracking.status)}
               {tracking.watchedYear ? `, ${tracking.watchedYear}` : ""}
             </dd>
           </div>

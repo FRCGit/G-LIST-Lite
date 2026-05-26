@@ -1,8 +1,10 @@
 export type WatchStatus = "Unwatched" | "Watching" | "Watched" | "Up Next";
+export type LanguagePreference = "" | "Eng" | "Sub" | "Jpn";
 
 export type LiteTrackingEntry = {
   titleId: string;
   status: WatchStatus;
+  lang?: LanguagePreference;
   watchedYear?: string;
   notes?: string;
   updatedAt?: string;
@@ -27,6 +29,8 @@ export type SortKey =
   | "releaseDate"
   | "timelineAndYear"
   | "status"
+  | "lang"
+  | "notes"
   | "watchedYear";
 
 export type SortDirection = "asc" | "desc";
