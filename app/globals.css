@@ -1341,7 +1341,10 @@ dd {
 @media (max-width: 760px) {
   .app-shell {
     display: block;
-    margin: 14px;
+    border-left: 0;
+    border-radius: 0;
+    border-right: 0;
+    margin: 0;
     padding: 0;
   }
 
@@ -1378,7 +1381,7 @@ dd {
   .content-shell {
     border-radius: 0 0 var(--radius) var(--radius);
     min-height: calc(100vh - 76px);
-    padding: 0 12px 18px;
+    padding: 0 4px 16px;
   }
 
   .content-inner {
@@ -1467,7 +1470,7 @@ dd {
   }
 
   .table-shell {
-    max-width: calc(100vw - 28px);
+    max-width: calc(100vw - 8px);
     width: auto !important;
   }
 
@@ -1475,6 +1478,27 @@ dd {
     -webkit-overflow-scrolling: touch;
     overflow-x: auto;
     touch-action: pan-x pan-y;
+  }
+
+  th,
+  td {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .watched-year-cell .year-input {
+    font-size: 14px;
+    padding-left: 6px;
+    padding-right: 6px;
+    width: 100%;
+  }
+
+  .status-select {
+    font-size: 14px;
+    min-width: 0;
+    padding-left: 6px;
+    padding-right: 18px;
+    width: 100%;
   }
 
   .poster-grid {

@@ -43,6 +43,7 @@ type TableColumn = {
   label: string;
   className: string;
   defaultWidth: number;
+  compactWidth?: number;
   minWidth: number;
   maxWidth?: number;
   spanKey?: (entry: LiteMediaEntry) => string;
@@ -78,6 +79,12 @@ const compactColumnWidthsKey = "g-list-lite-compact-column-widths-v1";
 const notepadKey = "g-list-lite-notepad-v1";
 const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
+const compactAutoSizedColumns: SortKey[] = [
+  "name",
+  "releaseDate",
+  "status",
+  "watchedYear"
+];
 const tableBorderAllowance = 0;
 const defaultPosterSize = 170;
 const appVersion = "v2026.05.26.16";
@@ -392,6 +399,30 @@ export default function Home() {
       mediaQuery.removeEventListener("change", updateColumnProfile);
     };
   }, []);
+
+  useEffect(() => {
+    if (!usesCompactColumns) {
+      return;
+    }
+
+    setCompactColumnWidths((current) => {
+      if (
+        compactAutoSizedColumns.every(
+          (columnKey) => current[columnKey] === undefined
+        )
+      ) {
+        return current;
+      }
+
+      const nextWidths = { ...current };
+
+      compactAutoSizedColumns.forEach((columnKey) => {
+        delete nextWidths[columnKey];
+      });
+
+      return nextWidths;
+    });
+  }, [usesCompactColumns]);
 
   useEffect(() => {
     if (hasLoadedLocalState) {
@@ -960,6 +991,7 @@ export default function Home() {
       label: "Name",
       className: "name-cell",
       defaultWidth: 440,
+      compactWidth: 190,
       minWidth: 260,
       maxWidth: 680,
       spanKey: (entry) => `name:${entry.name}`,
@@ -974,10 +1006,22 @@ export default function Home() {
       )
     },
     {
+      key: "releaseDate",
+      label: "Release date",
+      className: "release-cell",
+      defaultWidth: 170,
+      compactWidth: 94,
+      minWidth: 120,
+      maxWidth: 260,
+      spanKey: (entry) => `name:${entry.name}|release:${entry.releaseDate}`,
+      render: (entry) => entry.releaseDate
+    },
+    {
       key: "status",
       label: "Watch status",
       className: "status-cell",
       defaultWidth: 174,
+      compactWidth: 116,
       minWidth: 164,
       maxWidth: 260,
       render: (entry, entryTracking) => (
@@ -992,6 +1036,7 @@ export default function Home() {
       label: "Year",
       className: "watched-year-cell",
       defaultWidth: 112,
+      compactWidth: 74,
       minWidth: 96,
       maxWidth: 180,
       render: (entry, entryTracking) => (
@@ -1012,20 +1057,11 @@ export default function Home() {
       )
     },
     {
-      key: "releaseDate",
-      label: "Release date",
-      className: "release-cell",
-      defaultWidth: 170,
-      minWidth: 120,
-      maxWidth: 260,
-      spanKey: (entry) => `name:${entry.name}|release:${entry.releaseDate}`,
-      render: (entry) => entry.releaseDate
-    },
-    {
       key: "media",
       label: "Media",
       className: "media-cell",
       defaultWidth: 270,
+      compactWidth: 160,
       minWidth: 160,
       maxWidth: 420,
       render: (entry) => entry.media
@@ -1035,6 +1071,7 @@ export default function Home() {
       label: "Timeline and year",
       className: "timeline-cell",
       defaultWidth: 310,
+      compactWidth: 220,
       minWidth: 220,
       maxWidth: 520,
       spanKey: (entry) =>
@@ -1046,6 +1083,7 @@ export default function Home() {
       label: "Lang",
       className: "lang-cell",
       defaultWidth: 130,
+      compactWidth: 96,
       minWidth: 112,
       maxWidth: 180,
       render: (entry, entryTracking) => (
@@ -1060,6 +1098,7 @@ export default function Home() {
       label: "Notes",
       className: "notes-cell",
       defaultWidth: 92,
+      compactWidth: 82,
       minWidth: 82,
       maxWidth: 140,
       render: (entry, entryTracking) => (
@@ -1080,12 +1119,18 @@ export default function Home() {
     (widths, column) => {
       const activeWidths = usesCompactColumns ? compactColumnWidths : columnWidths;
       const fallbackWidth = usesCompactColumns
-        ? column.minWidth
+        ? column.compactWidth ?? column.minWidth
         : column.defaultWidth;
+      const minWidth = usesCompactColumns
+        ? column.compactWidth ?? column.minWidth
+        : column.minWidth;
 
       widths[column.key] = clampWidth(
         activeWidths[column.key] ?? fallbackWidth,
-        column
+        {
+          ...column,
+          minWidth
+        }
       );
       return widths;
     },
@@ -1120,9 +1165,15 @@ export default function Home() {
     event.currentTarget.setPointerCapture(pointerId);
 
     function handlePointerMove(moveEvent: PointerEvent) {
+      const minWidth = usesCompactColumns
+        ? column.compactWidth ?? column.minWidth
+        : column.minWidth;
       const nextWidth = clampWidth(
         startWidth + moveEvent.clientX - startX,
-        column
+        {
+          ...column,
+          minWidth
+        }
       );
 
       if (usesCompactColumns) {

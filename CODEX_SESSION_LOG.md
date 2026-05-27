@@ -403,10 +403,24 @@ Notepad save fix:
 
 Table column order update:
 
-- Current table order: `Name`, `Watch status`, `Year`, `Release date`, `Media`, `Timeline and year`, `Lang`, `Notes`.
+- Current table order: `Name`, `Release date`, `Watch status`, `Year`, `Media`, `Timeline and year`, `Lang`, `Notes`.
 - Previous table order to remember/restore if needed: `Name`, `Media`, `Release date`, `Timeline and year`, `Watch status`, `Year`, `Lang`, `Notes`.
+- Intermediate order before moving release date second: `Name`, `Watch status`, `Year`, `Release date`, `Media`, `Timeline and year`, `Lang`, `Notes`.
 
 Version badge placement:
 
 - The visible `G-LIST v...` badge is now a static bottom-right footer inside the content shell.
 - Previous behavior to remember/restore if needed: the version badge was `position: fixed` in the bottom-right viewport corner.
+
+Mobile table width/status fit:
+
+- Mobile now removes most outer table chrome/gutter by setting the app shell margin to `0`, removing side borders, and reducing content padding to `4px`.
+- Compact table widths now use explicit `compactWidth` values instead of each column's desktop `minWidth`.
+- Compact first columns are tuned so `Name` plus `Watch status` fits better on iPhone XR-width viewports: `Name` uses `228px`, `Watch status` uses `142px`, and the mobile status select fills its cell instead of forcing `15ch`.
+- Previous compact behavior to remember/restore if needed: compact fallback widths used each column's `minWidth`, with `Name` at `260px` and `Watch status` at `164px`.
+- When the app loads into mobile/compact mode or switches into it, any saved compact `Name` width is cleared so the first column returns to its narrow compact default.
+- Mobile column resizing now clamps against compact widths instead of desktop minimum widths.
+- Follow-up mobile tuning made the first three columns fit on-screen better: compact `Name` is now `206px`, `Watch status` is `116px`, and `Year` is `74px`.
+- Mobile status/year controls use smaller font and tighter horizontal padding so `Unwatched` and four-digit years fit in the tighter cells.
+- After moving `Release date` to the second column, mobile compact widths were tightened again so `Watch status` fits in view: `Name` is now `190px`, `Release date` is `94px`, `Watch status` remains `116px`, and `Year` remains `74px`.
+- Mobile mode now clears saved compact widths for `Name`, `Release date`, `Watch status`, and `Year` so older wider local column settings do not override the tuned mobile defaults.
