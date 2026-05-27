@@ -199,7 +199,7 @@ After deployment, if the live site shows plain HTML, flush the Hostinger CDN cac
 - `To Watch` is a UI label for the stored status value `Up Next`, preserving existing local and Supabase data.
 - The `lang` field is saved in tracking data. If the Supabase table has not yet been migrated, cloud sync falls back without `lang` until `supabase/schema.sql` is applied.
 - Row notes are part of tracking data and can sync through Supabase. The standalone Notes view notepad uses local browser storage under `g-list-lite-notepad-v1`.
-- Desktop table column widths key: `g-list-lite-column-widths-v1`.
+- Desktop table column widths key: `g-list-lite-column-widths-v2`.
 - Compact/mobile column widths key: `g-list-lite-compact-column-widths-v1`.
 - Poster size key: `g-list-lite-poster-size-v1`.
 - JSON import/export is kept as a backup and migration path even with cloud sync.

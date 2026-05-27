@@ -74,7 +74,7 @@ const sortOptions: { key: SortKey; label: string }[] = [
   { key: "lang", label: "Lang" },
   { key: "notes", label: "Notes" }
 ];
-const columnWidthsKey = "g-list-lite-column-widths-v1";
+const columnWidthsKey = "g-list-lite-column-widths-v2";
 const compactColumnWidthsKey = "g-list-lite-compact-column-widths-v1";
 const notepadKey = "g-list-lite-notepad-v1";
 const posterDensityKey = "g-list-lite-poster-density-v1";
@@ -990,7 +990,7 @@ export default function Home() {
       key: "name",
       label: "Name",
       className: "name-cell",
-      defaultWidth: 440,
+      defaultWidth: 348,
       compactWidth: 190,
       minWidth: 260,
       maxWidth: 680,
@@ -1009,7 +1009,7 @@ export default function Home() {
       key: "releaseDate",
       label: "Release date",
       className: "release-cell",
-      defaultWidth: 170,
+      defaultWidth: 150,
       compactWidth: 94,
       minWidth: 120,
       maxWidth: 260,
@@ -1020,7 +1020,7 @@ export default function Home() {
       key: "status",
       label: "Watch status",
       className: "status-cell",
-      defaultWidth: 174,
+      defaultWidth: 164,
       compactWidth: 116,
       minWidth: 164,
       maxWidth: 260,
@@ -1035,7 +1035,7 @@ export default function Home() {
       key: "watchedYear",
       label: "Year",
       className: "watched-year-cell",
-      defaultWidth: 112,
+      defaultWidth: 96,
       compactWidth: 74,
       minWidth: 96,
       maxWidth: 180,
@@ -1060,7 +1060,7 @@ export default function Home() {
       key: "media",
       label: "Media",
       className: "media-cell",
-      defaultWidth: 270,
+      defaultWidth: 198,
       compactWidth: 160,
       minWidth: 160,
       maxWidth: 420,
@@ -1070,7 +1070,7 @@ export default function Home() {
       key: "timelineAndYear",
       label: "Timeline and year",
       className: "timeline-cell",
-      defaultWidth: 310,
+      defaultWidth: 254,
       compactWidth: 220,
       minWidth: 220,
       maxWidth: 520,
@@ -1082,7 +1082,7 @@ export default function Home() {
       key: "lang",
       label: "Lang",
       className: "lang-cell",
-      defaultWidth: 130,
+      defaultWidth: 112,
       compactWidth: 96,
       minWidth: 112,
       maxWidth: 180,

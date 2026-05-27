@@ -424,3 +424,9 @@ Mobile table width/status fit:
 - Mobile status/year controls use smaller font and tighter horizontal padding so `Unwatched` and four-digit years fit in the tighter cells.
 - After moving `Release date` to the second column, mobile compact widths were tightened again so `Watch status` fits in view: `Name` is now `190px`, `Release date` is `94px`, `Watch status` remains `116px`, and `Year` remains `74px`.
 - Mobile mode now clears saved compact widths for `Name`, `Release date`, `Watch status`, and `Year` so older wider local column settings do not override the tuned mobile defaults.
+
+Desktop default column widths:
+
+- Desktop column-width storage key was bumped from `g-list-lite-column-widths-v1` to `g-list-lite-column-widths-v2` so the new default desktop layout loads even if older desktop widths were saved locally.
+- Desktop defaults were matched to the user's narrowed local layout from the May 27 screenshot: `Name` 348, `Release date` 150, `Watch status` 164, `Year` 96, `Media` 198, `Timeline and year` 254, `Lang` 112, `Notes` 92.
+- Previous desktop defaults to remember/restore if needed: `Name` 440, `Release date` 170, `Watch status` 174, `Year` 112, `Media` 270, `Timeline and year` 310, `Lang` 130, `Notes` 92.
