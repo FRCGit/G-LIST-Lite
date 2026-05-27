@@ -430,3 +430,8 @@ Desktop default column widths:
 - Desktop column-width storage key was bumped from `g-list-lite-column-widths-v1` to `g-list-lite-column-widths-v2` so the new default desktop layout loads even if older desktop widths were saved locally.
 - Desktop defaults were matched to the user's narrowed local layout from the May 27 screenshot: `Name` 348, `Release date` 150, `Watch status` 164, `Year` 96, `Media` 198, `Timeline and year` 254, `Lang` 112, `Notes` 92.
 - Previous desktop defaults to remember/restore if needed: `Name` 440, `Release date` 170, `Watch status` 174, `Year` 112, `Media` 270, `Timeline and year` 310, `Lang` 130, `Notes` 92.
+
+Mobile preview text tuning:
+
+- Mobile preview sheet summary text (`.extract`) was bumped from `13px` to `15px` for readability.
+- Mobile preview metadata rows (`dl`) were reduced to `15px` so the media/release/timeline/status details fit a bit better below the summary.

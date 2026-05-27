@@ -1604,13 +1604,14 @@ dd {
   }
 
   .extract {
-    font-size: 13px;
+    font-size: 15px;
     line-height: 1.35;
     margin-bottom: 9px;
     -webkit-line-clamp: 8;
   }
 
   dl {
+    font-size: 15px;
     gap: 5px;
   }
 
