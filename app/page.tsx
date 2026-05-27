@@ -160,6 +160,22 @@ function loadPosterSize(): number {
   return defaultPosterSize;
 }
 
+function loadNotepadText(): string {
+  try {
+    return window.localStorage.getItem(notepadKey) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function saveNotepadText(text: string): void {
+  try {
+    window.localStorage.setItem(notepadKey, text);
+  } catch {
+    // Keep the in-memory note usable even if browser storage is unavailable.
+  }
+}
+
 function clampWidth(width: number, column: TableColumn): number {
   return Math.max(
     column.minWidth,
@@ -341,7 +357,7 @@ export default function Home() {
     setTracking(loadTracking());
     setColumnWidths(loadColumnWidths(columnWidthsKey));
     setCompactColumnWidths(loadColumnWidths(compactColumnWidthsKey));
-    setNotepadText(window.localStorage.getItem(notepadKey) ?? "");
+    setNotepadText(loadNotepadText());
     setPosterSize(loadPosterSize());
     setUsesCompactColumns(window.matchMedia("(max-width: 760px)").matches);
     setHasLoadedLocalState(true);
@@ -570,7 +586,7 @@ export default function Home() {
 
   useEffect(() => {
     if (hasLoadedLocalState) {
-      window.localStorage.setItem(notepadKey, notepadText);
+      saveNotepadText(notepadText);
     }
   }, [hasLoadedLocalState, notepadText]);
 
@@ -933,6 +949,11 @@ export default function Home() {
     setSelectedEntry(entry);
   }
 
+  function updateNotepadText(text: string) {
+    setNotepadText(text);
+    saveNotepadText(text);
+  }
+
   const tableColumns: TableColumn[] = [
     {
       key: "name",
@@ -951,36 +972,6 @@ export default function Home() {
           onMouseMove={movePreview}
         />
       )
-    },
-    {
-      key: "media",
-      label: "Media",
-      className: "media-cell",
-      defaultWidth: 270,
-      minWidth: 160,
-      maxWidth: 420,
-      render: (entry) => entry.media
-    },
-    {
-      key: "releaseDate",
-      label: "Release date",
-      className: "release-cell",
-      defaultWidth: 170,
-      minWidth: 120,
-      maxWidth: 260,
-      spanKey: (entry) => `name:${entry.name}|release:${entry.releaseDate}`,
-      render: (entry) => entry.releaseDate
-    },
-    {
-      key: "timelineAndYear",
-      label: "Timeline and year",
-      className: "timeline-cell",
-      defaultWidth: 310,
-      minWidth: 220,
-      maxWidth: 520,
-      spanKey: (entry) =>
-        `name:${entry.name}|timeline:${entry.timelineAndYear}`,
-      render: (entry) => entry.timelineAndYear
     },
     {
       key: "status",
@@ -1019,6 +1010,36 @@ export default function Home() {
           value={entryTracking.watchedYear ?? ""}
         />
       )
+    },
+    {
+      key: "releaseDate",
+      label: "Release date",
+      className: "release-cell",
+      defaultWidth: 170,
+      minWidth: 120,
+      maxWidth: 260,
+      spanKey: (entry) => `name:${entry.name}|release:${entry.releaseDate}`,
+      render: (entry) => entry.releaseDate
+    },
+    {
+      key: "media",
+      label: "Media",
+      className: "media-cell",
+      defaultWidth: 270,
+      minWidth: 160,
+      maxWidth: 420,
+      render: (entry) => entry.media
+    },
+    {
+      key: "timelineAndYear",
+      label: "Timeline and year",
+      className: "timeline-cell",
+      defaultWidth: 310,
+      minWidth: 220,
+      maxWidth: 520,
+      spanKey: (entry) =>
+        `name:${entry.name}|timeline:${entry.timelineAndYear}`,
+      render: (entry) => entry.timelineAndYear
     },
     {
       key: "lang",
@@ -1742,7 +1763,7 @@ export default function Home() {
         <section className="notepad-view" aria-label="G-LIST notepad">
           <textarea
             aria-label="Notepad"
-            onChange={(event) => setNotepadText(event.target.value)}
+            onChange={(event) => updateNotepadText(event.target.value)}
             placeholder="Notes"
             value={notepadText}
           />
@@ -1812,6 +1833,10 @@ export default function Home() {
           })}
         </section>
       )}
+      </div>
+
+      <div className="version-badge" aria-label={`G-LIST version ${appVersion}`}>
+        G-LIST {appVersion}
       </div>
       </div>
 
@@ -2049,9 +2074,6 @@ export default function Home() {
         </div>
       ) : null}
 
-      <div className="version-badge" aria-label={`G-LIST version ${appVersion}`}>
-        G-LIST {appVersion}
-      </div>
     </main>
   );
 }

@@ -390,3 +390,23 @@ Verification:
 - `npm run lint` passed.
 - `npm run build` passed after clearing generated `.next` and `out` folders inside the repo.
 - Postbuild log confirmed assets copied to `out/glist-assets/static` and `public/glist-assets/static`, with built references rewritten.
+
+## 2026-05-27 Handoff Update
+
+Notepad save fix:
+
+- The standalone Notes view notepad still uses local browser storage under `g-list-lite-notepad-v1`.
+- Added dedicated `loadNotepadText` and `saveNotepadText` helpers with storage error handling.
+- The notepad textarea now saves immediately inside its `onChange` handler, while the existing state-effect save remains as a backup.
+- `npm run lint` passed after rerunning outside the sandbox because Node hit a Windows `EPERM` resolving the OneDrive user path.
+- Local dev server was started on `http://127.0.0.1:3001` and returned HTTP 200.
+
+Table column order update:
+
+- Current table order: `Name`, `Watch status`, `Year`, `Release date`, `Media`, `Timeline and year`, `Lang`, `Notes`.
+- Previous table order to remember/restore if needed: `Name`, `Media`, `Release date`, `Timeline and year`, `Watch status`, `Year`, `Lang`, `Notes`.
+
+Version badge placement:
+
+- The visible `G-LIST v...` badge is now a static bottom-right footer inside the content shell.
+- Previous behavior to remember/restore if needed: the version badge was `position: fixed` in the bottom-right viewport corner.
