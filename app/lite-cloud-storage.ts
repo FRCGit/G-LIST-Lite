@@ -22,6 +22,17 @@ type TrackingRow = {
   updated_at: string;
 };
 
+export type CloudNotepad = {
+  text: string;
+  updatedAt?: string;
+};
+
+type NotepadRow = {
+  user_id: string;
+  body: string | null;
+  updated_at: string;
+};
+
 let supabaseClient: SupabaseClient | null = null;
 
 export function isCloudConfigured(): boolean {
@@ -127,6 +138,84 @@ export async function upsertCloudTrackingBatch(
   }
 }
 
+export function mergeNotepad(
+  localNotepad: CloudNotepad,
+  cloudNotepad: CloudNotepad | null
+): CloudNotepad {
+  if (!cloudNotepad) {
+    return localNotepad;
+  }
+
+  if (isNewer(localNotepad.updatedAt, cloudNotepad.updatedAt)) {
+    return localNotepad;
+  }
+
+  return cloudNotepad;
+}
+
+export async function loadCloudNotepad(
+  userId: string
+): Promise<CloudNotepad | null> {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("lite_notepad")
+    .select("user_id,body,updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTableError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const row = data as NotepadRow;
+
+  return {
+    text: row.body ?? "",
+    updatedAt: row.updated_at
+  };
+}
+
+export async function upsertCloudNotepad(
+  userId: string,
+  notepad: CloudNotepad
+): Promise<void> {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return;
+  }
+
+  const { error } = await supabase.from("lite_notepad").upsert(
+    {
+      user_id: userId,
+      body: notepad.text,
+      updated_at: notepad.updatedAt ?? new Date().toISOString()
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) {
+    if (isMissingTableError(error)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 async function loadCloudTrackingWithoutLang(
   supabase: SupabaseClient,
   userId: string
@@ -206,6 +295,13 @@ function isMissingLangColumnError(error: { code?: string; message?: string }) {
   return (
     error.code === "42703" ||
     error.message?.toLocaleLowerCase().includes("lang") === true
+  );
+}
+
+function isMissingTableError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42P01" ||
+    error.message?.toLocaleLowerCase().includes("does not exist") === true
   );
 }
 

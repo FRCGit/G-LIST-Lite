@@ -16,9 +16,13 @@ import {
 import {
   getSupabaseClient,
   isCloudConfigured,
+  loadCloudNotepad,
   loadCloudTracking,
+  mergeNotepad,
   mergeTracking,
+  upsertCloudNotepad,
   upsertCloudTrackingBatch,
+  type CloudNotepad,
   type CloudUser
 } from "./lite-cloud-storage";
 import { loadTracking, saveTracking } from "./lite-storage";
@@ -77,6 +81,7 @@ const sortOptions: { key: SortKey; label: string }[] = [
 const columnWidthsKey = "g-list-lite-column-widths-v2";
 const compactColumnWidthsKey = "g-list-lite-compact-column-widths-v1";
 const notepadKey = "g-list-lite-notepad-v1";
+const notepadUpdatedAtKey = "g-list-lite-notepad-updated-at-v1";
 const posterDensityKey = "g-list-lite-poster-density-v1";
 const posterSizeKey = "g-list-lite-poster-size-v1";
 const compactAutoSizedColumns: SortKey[] = [
@@ -90,6 +95,10 @@ const defaultPosterSize = 170;
 const appVersion = "v2026.05.26.16";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
+const tableMomentumMultiplier = 2.25;
+const tableMomentumFriction = 0.975;
+const tableMomentumStartThreshold = 0.018;
+const tableMomentumStopThreshold = 0.006;
 
 function GListLogo() {
   return (
@@ -167,17 +176,31 @@ function loadPosterSize(): number {
   return defaultPosterSize;
 }
 
-function loadNotepadText(): string {
+function loadNotepad(): CloudNotepad {
   try {
-    return window.localStorage.getItem(notepadKey) ?? "";
+    const text = window.localStorage.getItem(notepadKey) ?? "";
+    const updatedAt =
+      window.localStorage.getItem(notepadUpdatedAtKey) ??
+      (text ? new Date().toISOString() : undefined);
+
+    return {
+      text,
+      updatedAt
+    };
   } catch {
-    return "";
+    return {
+      text: ""
+    };
   }
 }
 
-function saveNotepadText(text: string): void {
+function saveNotepad(notepad: CloudNotepad): void {
   try {
-    window.localStorage.setItem(notepadKey, text);
+    window.localStorage.setItem(notepadKey, notepad.text);
+
+    if (notepad.updatedAt) {
+      window.localStorage.setItem(notepadUpdatedAtKey, notepad.updatedAt);
+    }
   } catch {
     // Keep the in-memory note usable even if browser storage is unavailable.
   }
@@ -349,6 +372,7 @@ export default function Home() {
   const [isDataMenuOpen, setIsDataMenuOpen] = useState(false);
   const [noteEntry, setNoteEntry] = useState<LiteMediaEntry | null>(null);
   const [notepadText, setNotepadText] = useState("");
+  const [notepadUpdatedAt, setNotepadUpdatedAt] = useState<string | undefined>();
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -359,12 +383,16 @@ export default function Home() {
   const cloudUserRef = useRef<CloudUser | null>(null);
   const hasHydratedCloudRef = useRef(false);
   const trackingRef = useRef<Record<string, LiteTrackingEntry>>({});
+  const notepadRef = useRef<CloudNotepad>({ text: "" });
 
   useEffect(() => {
+    const savedNotepad = loadNotepad();
+
     setTracking(loadTracking());
     setColumnWidths(loadColumnWidths(columnWidthsKey));
     setCompactColumnWidths(loadColumnWidths(compactColumnWidthsKey));
-    setNotepadText(loadNotepadText());
+    setNotepadText(savedNotepad.text);
+    setNotepadUpdatedAt(savedNotepad.updatedAt);
     setPosterSize(loadPosterSize());
     setUsesCompactColumns(window.matchMedia("(max-width: 760px)").matches);
     setHasLoadedLocalState(true);
@@ -439,6 +467,13 @@ export default function Home() {
   useEffect(() => {
     hasHydratedCloudRef.current = hasHydratedCloud;
   }, [hasHydratedCloud]);
+
+  useEffect(() => {
+    notepadRef.current = {
+      text: notepadText,
+      updatedAt: notepadUpdatedAt
+    };
+  }, [notepadText, notepadUpdatedAt]);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -525,8 +560,12 @@ export default function Home() {
       }
 
       try {
-        const cloudTracking = await loadCloudTracking(activeCloudUser.id);
+        const [cloudTracking, cloudNotepad] = await Promise.all([
+          loadCloudTracking(activeCloudUser.id),
+          loadCloudNotepad(activeCloudUser.id)
+        ]);
         const mergedTracking = mergeTracking(trackingRef.current, cloudTracking);
+        const mergedNotepad = mergeNotepad(notepadRef.current, cloudNotepad);
 
         if (!isCurrent) {
           return;
@@ -534,10 +573,14 @@ export default function Home() {
 
         setTracking(mergedTracking);
         saveTracking(mergedTracking);
+        setNotepadText(mergedNotepad.text);
+        setNotepadUpdatedAt(mergedNotepad.updatedAt);
+        saveNotepad(mergedNotepad);
         await upsertCloudTrackingBatch(
           activeCloudUser.id,
           Object.values(mergedTracking)
         );
+        await upsertCloudNotepad(activeCloudUser.id, mergedNotepad);
 
         if (isCurrent) {
           setHasHydratedCloud(true);
@@ -617,9 +660,56 @@ export default function Home() {
 
   useEffect(() => {
     if (hasLoadedLocalState) {
-      saveNotepadText(notepadText);
+      saveNotepad({
+        text: notepadText,
+        updatedAt: notepadUpdatedAt
+      });
     }
-  }, [hasLoadedLocalState, notepadText]);
+  }, [hasLoadedLocalState, notepadText, notepadUpdatedAt]);
+
+  useEffect(() => {
+    if (!cloudUser || !hasHydratedCloud || !hasLoadedLocalState) {
+      return;
+    }
+
+    if (!isOnline) {
+      setCloudSyncState("offline");
+      setCloudMessage("Offline. Local changes will sync later");
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCloudSyncState("saving");
+      setCloudMessage("Saving");
+      upsertCloudNotepad(cloudUser.id, {
+        text: notepadText,
+        updatedAt: notepadUpdatedAt
+      })
+        .then(() => {
+          setCloudSyncState("saved");
+          setCloudMessage("Saved");
+        })
+        .catch(() => {
+          setCloudSyncState(navigator.onLine ? "error" : "offline");
+          setCloudMessage(
+            navigator.onLine
+              ? "Cloud save failed"
+              : "Offline. Local changes will sync later"
+          );
+        });
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    cloudUser,
+    hasHydratedCloud,
+    hasLoadedLocalState,
+    isOnline,
+    notepadText,
+    notepadUpdatedAt
+  ]);
 
   useEffect(() => {
     if (cloudUser) {
@@ -981,8 +1071,14 @@ export default function Home() {
   }
 
   function updateNotepadText(text: string) {
+    const updatedAt = new Date().toISOString();
+
     setNotepadText(text);
-    saveNotepadText(text);
+    setNotepadUpdatedAt(updatedAt);
+    saveNotepad({
+      text,
+      updatedAt
+    });
   }
 
   const tableColumns: TableColumn[] = [
@@ -1294,12 +1390,12 @@ export default function Home() {
   function startTableMomentum(initialVelocity: number) {
     const tableScroll = tableScrollRef.current;
 
-    if (!tableScroll || Math.abs(initialVelocity) < 0.035) {
+    if (!tableScroll || Math.abs(initialVelocity) < tableMomentumStartThreshold) {
       return;
     }
 
     const scroller = tableScroll;
-    let velocity = initialVelocity * 1.35;
+    let velocity = initialVelocity * tableMomentumMultiplier;
     let previousTime = performance.now();
 
     function coast(currentTime: number) {
@@ -1313,9 +1409,13 @@ export default function Home() {
       const atEnd =
         scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1;
 
-      velocity *= Math.pow(0.955, elapsed / 16.67);
+      velocity *= Math.pow(tableMomentumFriction, elapsed / 16.67);
 
-      if (Math.abs(velocity) < 0.018 || (velocity < 0 && atStart) || (velocity > 0 && atEnd)) {
+      if (
+        Math.abs(velocity) < tableMomentumStopThreshold ||
+        (velocity < 0 && atStart) ||
+        (velocity > 0 && atEnd)
+      ) {
         tableMomentumRef.current = null;
         return;
       }
@@ -1449,7 +1549,7 @@ export default function Home() {
     const scrollDelta = currentScrollLeft - previousScrollLeft;
 
     if (scrollDelta !== 0) {
-      drag.velocity = drag.velocity * 0.62 + (scrollDelta / elapsed) * 0.38;
+      drag.velocity = drag.velocity * 0.45 + (scrollDelta / elapsed) * 0.55;
       drag.lastScrollLeft = currentScrollLeft;
       drag.lastTime = now;
       drag.moved = true;

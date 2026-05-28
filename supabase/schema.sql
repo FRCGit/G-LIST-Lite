@@ -50,3 +50,32 @@ drop policy if exists "Users can delete own tracking" on public.lite_tracking;
 create policy "Users can delete own tracking"
 on public.lite_tracking for delete
 using (auth.uid() = user_id);
+
+create table if not exists public.lite_notepad (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  body text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.lite_notepad enable row level security;
+
+drop policy if exists "Users can read own notepad" on public.lite_notepad;
+create policy "Users can read own notepad"
+on public.lite_notepad for select
+using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own notepad" on public.lite_notepad;
+create policy "Users can insert own notepad"
+on public.lite_notepad for insert
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own notepad" on public.lite_notepad;
+create policy "Users can update own notepad"
+on public.lite_notepad for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own notepad" on public.lite_notepad;
+create policy "Users can delete own notepad"
+on public.lite_notepad for delete
+using (auth.uid() = user_id);

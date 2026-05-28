@@ -435,3 +435,18 @@ Mobile preview text tuning:
 
 - Mobile preview sheet summary text (`.extract`) was bumped from `13px` to `15px` for readability.
 - Mobile preview metadata rows (`dl`) were reduced to `15px` so the media/release/timeline/status details fit a bit better below the summary.
+
+## 2026-05-28 Handoff Update
+
+Standalone notepad cloud sync:
+
+- The standalone Notes view notepad now remains cached in local browser storage under `g-list-lite-notepad-v1`, with a new local timestamp key `g-list-lite-notepad-updated-at-v1`.
+- Added Supabase table `public.lite_notepad` in `supabase/schema.sql`; apply the schema in Supabase before expecting cross-device notepad sync.
+- Cloud notepad sync is no-op safe if the live database has not been migrated yet, so tracking sync should keep working while `lite_notepad` is missing.
+- Sign-in hydration now loads tracking and the standalone notepad together, merges by `updatedAt`, saves the merged notepad locally, and upserts it to Supabase.
+- Standalone notepad edits are debounced and saved to Supabase when signed in, while localStorage remains the offline/cache fallback.
+
+Mobile table momentum:
+
+- Horizontal table momentum was increased for mobile/touch swipes: lift velocity multiplier is now `2.25`, friction is `0.975`, start threshold is `0.018`, and stop threshold is `0.006`.
+- Touch velocity tracking now weights the latest native scroll delta more heavily (`0.55`) so fast flicks keep more speed after finger lift.
