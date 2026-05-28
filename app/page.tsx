@@ -95,10 +95,10 @@ const defaultPosterSize = 170;
 const appVersion = "v2026.05.26.16";
 const previewCardWidth = 640;
 const previewCardHeight = 520;
-const tableMomentumMultiplier = 2.25;
-const tableMomentumFriction = 0.975;
-const tableMomentumStartThreshold = 0.018;
-const tableMomentumStopThreshold = 0.006;
+const tableMomentumMultiplier = 1.35;
+const tableMomentumFriction = 0.955;
+const tableMomentumStartThreshold = 0.035;
+const tableMomentumStopThreshold = 0.018;
 
 function GListLogo() {
   return (
@@ -1426,9 +1426,16 @@ export default function Home() {
     tableMomentumRef.current = window.requestAnimationFrame(coast);
   }
 
-  function isInteractiveTableTarget(target: EventTarget | null) {
+  function isInteractiveTableTarget(
+    target: EventTarget | null,
+    { allowLinks = false }: { allowLinks?: boolean } = {}
+  ) {
+    const interactiveSelector = allowLinks
+      ? "button, input, select, textarea, .resize-handle"
+      : "button, input, select, textarea, a, .resize-handle";
+
     return target instanceof Element
-      ? Boolean(target.closest("button, input, select, textarea, a, .resize-handle"))
+      ? Boolean(target.closest(interactiveSelector))
       : false;
   }
 
@@ -1515,7 +1522,7 @@ export default function Home() {
       !tableScroll ||
       !touch ||
       tableScroll.scrollWidth <= tableScroll.clientWidth ||
-      isInteractiveTableTarget(event.target)
+      isInteractiveTableTarget(event.target, { allowLinks: true })
     ) {
       return;
     }
@@ -1549,7 +1556,7 @@ export default function Home() {
     const scrollDelta = currentScrollLeft - previousScrollLeft;
 
     if (scrollDelta !== 0) {
-      drag.velocity = drag.velocity * 0.45 + (scrollDelta / elapsed) * 0.55;
+      drag.velocity = drag.velocity * 0.62 + (scrollDelta / elapsed) * 0.38;
       drag.lastScrollLeft = currentScrollLeft;
       drag.lastTime = now;
       drag.moved = true;

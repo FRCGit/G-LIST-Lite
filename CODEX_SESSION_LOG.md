@@ -448,5 +448,6 @@ Standalone notepad cloud sync:
 
 Mobile table momentum:
 
-- Horizontal table momentum was increased for mobile/touch swipes: lift velocity multiplier is now `2.25`, friction is `0.975`, start threshold is `0.018`, and stop threshold is `0.006`.
-- Touch velocity tracking now weights the latest native scroll delta more heavily (`0.55`) so fast flicks keep more speed after finger lift.
+- The stronger May 28 momentum tuning was reverted to the earlier values: lift velocity multiplier `1.35`, friction `0.955`, start threshold `0.035`, and stop threshold `0.018`.
+- Touch velocity tracking was restored to the earlier blend: previous velocity weight `0.62`, latest native scroll delta weight `0.38`.
+- Actual mobile issue was touches that started on title links in the `Name` column. Touch swipes now allow links through the tracking path, while desktop/mouse drag still treats links as interactive targets.
