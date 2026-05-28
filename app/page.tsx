@@ -1067,6 +1067,7 @@ export default function Home() {
   }
 
   function openPreviewSheet(entry: LiteMediaEntry) {
+    setPreview(null);
     setSelectedEntry(entry);
   }
 

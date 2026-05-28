@@ -451,3 +451,9 @@ Mobile table momentum:
 - The stronger May 28 momentum tuning was reverted to the earlier values: lift velocity multiplier `1.35`, friction `0.955`, start threshold `0.035`, and stop threshold `0.018`.
 - Touch velocity tracking was restored to the earlier blend: previous velocity weight `0.62`, latest native scroll delta weight `0.38`.
 - Actual mobile issue was touches that started on title links in the `Name` column. Touch swipes now allow links through the tracking path, while desktop/mouse drag still treats links as interactive targets.
+
+Preview sheet scroll/stacking:
+
+- Opening the preview sheet now clears the desktop hover preview first, preventing the iPad/tablet double-popup effect where `.preview-card` stayed visible behind `.preview-sheet`.
+- While the sheet is open, both `html` and `body` are overflow-locked, and the sheet/backdrop use `overscroll-behavior: contain`.
+- Mobile `.preview-sheet` now scrolls internally with `overflow-y: auto` instead of `overflow: hidden`, preventing vertical swipes from scrolling the underlying page/browser chrome.
