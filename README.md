@@ -1,6 +1,10 @@
-# G-LIST Lite
+# G-LIST
 
-G-LIST Lite is a compact Gundam media tracker built from the `TV series, films, and video` table on Wikipedia's Gundam page. It keeps the familiar table-first structure, adds personal watch tracking, and optionally syncs that tracking data through Supabase.
+<img width="2538" height="1226" alt="image" src="https://github.com/user-attachments/assets/5f1b47b5-cb98-447e-a954-f99c3ade2318" />
+
+
+
+G-LIST is a compact Gundam media tracker built from the `TV series, films, and video` table on Wikipedia's Gundam page. It keeps the familiar table-first structure, adds personal watch tracking, and optionally syncs that tracking data through Supabase.
 
 Live site:
 
