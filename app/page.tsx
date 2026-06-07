@@ -305,12 +305,13 @@ function RailButton({
   return (
     <button
       aria-label={label}
-      className={active ? "active" : ""}
+      className={active ? "rail-button active" : "rail-button"}
       onClick={onClick}
       title={label}
       type="button"
     >
       {children}
+      <span className="rail-label">{label}</span>
     </button>
   );
 }
@@ -1584,7 +1585,7 @@ export default function Home() {
       <aside className="side-rail" aria-label="Library sections">
         <RailButton
           active={viewMode === "table"}
-          label="Library table"
+          label="Table"
           onClick={() => setViewMode("table")}
         >
           <ListIcon />
@@ -1606,13 +1607,14 @@ export default function Home() {
         <div className="side-rail-data" ref={dataMenuRef}>
           <button
             aria-expanded={isDataMenuOpen}
-            aria-label="Data backup"
-            className={isDataMenuOpen ? "active" : ""}
+            aria-label="Backup"
+            className={isDataMenuOpen ? "rail-button active" : "rail-button"}
             onClick={() => setIsDataMenuOpen((open) => !open)}
-            title="Data Backup"
+            title="Backup"
             type="button"
           >
             <BackupIcon />
+            <span className="rail-label">Backup</span>
           </button>
           {isDataMenuOpen ? (
             <div className="rail-menu">

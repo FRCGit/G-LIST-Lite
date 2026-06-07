@@ -457,3 +457,39 @@ Preview sheet scroll/stacking:
 - Opening the preview sheet now clears the desktop hover preview first, preventing the iPad/tablet double-popup effect where `.preview-card` stayed visible behind `.preview-sheet`.
 - While the sheet is open, both `html` and `body` are overflow-locked, and the sheet/backdrop use `overscroll-behavior: contain`.
 - Mobile `.preview-sheet` now scrolls internally with `overflow-y: auto` instead of `overflow: hidden`, preventing vertical swipes from scrolling the underlying page/browser chrome.
+
+Desktop rail labels:
+
+- Desktop left rail now uses a wider `176px` column with icon + text labels: `Table`, `Poster wall`, `Notes`, and `Backup`.
+- Active state remains the existing blue treatment, now applied to the full icon+text rail button instead of only a square icon.
+- Tablet and mobile keep the rail icon-only to preserve table/content width.
+
+Firebase migration plan:
+
+- Goal: replace optional Supabase cloud sync with Firebase Auth + Cloud Firestore so G-LIST Lite has a no-cost managed backend without Supabase's free-project inactivity pause.
+- Current Supabase usage is limited to email/password auth, per-user tracking sync in `lite_tracking`, and one per-user standalone notepad row in `lite_notepad`; localStorage remains the offline/local fallback.
+- Firebase target shape:
+  - Use Firebase Auth for sign-in. Prefer email/password first; Google sign-in can be added later if desired.
+  - Use Cloud Firestore for user-owned records.
+  - Suggested collections:
+    - `users/{uid}/tracking/{titleId}` with fields `status`, `lang`, `watchedYear`, `notes`, and `updatedAt`.
+    - `users/{uid}/notepad/main` with fields `body` and `updatedAt`.
+  - Add Firestore security rules so signed-in users can only read/write documents under their own `users/{uid}` path.
+- Migration implementation steps:
+  1. Create a Firebase project on the Spark plan and enable Authentication plus Cloud Firestore.
+  2. Add Firebase web config env vars to the app and install the Firebase SDK.
+  3. Create a Firebase storage helper to replace `app/lite-cloud-storage.ts` while keeping the same merge semantics.
+  4. Update `app/page.tsx` auth flows from Supabase calls to Firebase Auth calls.
+  5. Preserve localStorage-first behavior so the app still works signed out/offline.
+  6. Add import/export compatibility so existing JSON backups remain useful.
+  7. Remove Supabase dependency/env docs/schema after Firebase sync is verified.
+- Verification needed:
+  - `npm run lint`
+  - `npm run build`
+  - Manual signed-out tracking save/load.
+  - Manual sign-in, tracking sync, notepad sync, sign-out/sign-in hydration.
+  - Firestore security-rule test or manual check with two users.
+- Pricing rationale checked on 2026-06-07:
+  - Firebase Spark is no-cost and quota-capped; official docs found no Supabase-style inactivity pause for Firestore.
+  - Firestore free quota was listed as 1 GiB stored data, 50,000 reads/day, 20,000 writes/day, 20,000 deletes/day, and 10 GiB outbound/month.
+  - Blaze is pay-as-you-go, not a fixed `$25/month` upgrade like Supabase Pro.
